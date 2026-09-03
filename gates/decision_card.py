@@ -56,7 +56,7 @@ def emphasis_problems(text):
     if opts and plain:
         bad.append(f"E2 option words not bold: {plain[:3]}")
     # E3: recommendation contains a bold option word that matches the table
-    rec = re.search(r"(recommend|建議)[^\n]*", text, re.I)
+    rec = re.search(r"^[^\n]*(recommend|建議)[^\n]*$", text, re.I | re.M)
     if rec:
         bold_in_rec = set(re.findall(r"\*\*(.+?)\*\*", rec.group(0)))
         table_words = {o.strip("* ") for o in opts}
