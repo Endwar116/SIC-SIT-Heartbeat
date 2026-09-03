@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.example.heartbeat</string>
+  <key>ProgramArguments</key><array>
+    <string>/bin/bash</string>
+    <string>/ABSOLUTE/PATH/TO/SIC-SIT-Heartbeat/heartbeat/tick.sh</string>
+  </array>
+  <key>EnvironmentVariables</key><dict>
+    <key>HEARTBEAT_HOME</key><string>/Users/YOU/.sic-sit-heartbeat</string>
+    <key>HEARTBEAT_AGENT</key><string>agent</string>
+  </dict>
+  <key>StartInterval</key><integer>3600</integer>
+  <key>RunAtLoad</key><true/>
+  <!-- Log paths MUST be on the internal disk. On an external/unmounted volume launchd
+       returns exit 78 (EX_CONFIG) before running anything and the job looks idle forever. -->
+  <key>StandardOutPath</key><string>/Users/YOU/.sic-sit-heartbeat/logs/launchd.out.log</string>
+  <key>StandardErrorPath</key><string>/Users/YOU/.sic-sit-heartbeat/logs/launchd.err.log</string>
+</dict></plist>

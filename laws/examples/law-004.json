@@ -1,0 +1,30 @@
+{
+ "id": "law-004",
+ "incident": {
+  "when": "2026-07-22",
+  "what": "Internal documents had been deleted from a public staging repository's working tree, but remained fully readable in its git history.",
+  "signal": "Found during a pre-publication audit of the history, not the tree."
+ },
+ "root_cause": "History was treated as an implementation detail. For a public repo, history is the product.",
+ "law": {
+  "text": "Internal files never enter a public staging repository, not even briefly. If one did, the history is rebuilt before publication; deleting the file is not a fix.",
+  "checks": [
+   "pre-publish scan runs over all commits (git log -p), not only HEAD",
+   "any hit => history rewrite, not a deletion commit"
+  ]
+ },
+ "enforced_by": {
+  "kind": "procedure",
+  "ref": "docs/THREAT_MODEL.md#history"
+ },
+ "lineage": [
+  "incident:2026-07-22",
+  "law-004",
+  "procedure:docs/THREAT_MODEL.md#history"
+ ],
+ "legislated": {
+  "by": "maintainers",
+  "at": "2026-09-03T00:00:00+08:00"
+ },
+ "notes": "De-identified from a real operating incident. Names, systems and paths removed; the mechanism is kept."
+}

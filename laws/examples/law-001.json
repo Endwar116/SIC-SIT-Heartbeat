@@ -1,0 +1,31 @@
+{
+ "id": "law-001",
+ "incident": {
+  "when": "2026-07-20",
+  "what": "The ledger code was upgraded to a new schema version. Existing rounds were not migrated. The validator crashed on every old round and the agent lost the ability to append.",
+  "signal": "Crash on first append after the upgrade."
+ },
+ "root_cause": "An upgrade was treated as a code change only. Existing data is part of the upgrade.",
+ "law": {
+  "text": "An upgrade is three things done together or not at all: new code, migration of existing records, and a fail-fast check that refuses to run if any record is on the old shape.",
+  "checks": [
+   "after upgrade: verify walks the whole chain and passes",
+   "a migration script exists and was run on the live ledger, not only on a fixture",
+   "the validator refuses (exit non-zero) rather than skipping records it cannot parse"
+  ]
+ },
+ "enforced_by": {
+  "kind": "checker",
+  "ref": "ledger/ledger.py"
+ },
+ "lineage": [
+  "incident:2026-07-20",
+  "law-001",
+  "checker:ledger/ledger.py"
+ ],
+ "legislated": {
+  "by": "maintainers",
+  "at": "2026-09-03T00:00:00+08:00"
+ },
+ "notes": "De-identified from a real operating incident. Names, systems and paths removed; the mechanism is kept."
+}

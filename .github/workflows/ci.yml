@@ -1,0 +1,22 @@
+name: tests
+on: [push, pull_request]
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.9", "3.11", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ matrix.python }}" }
+      - run: python -W error::ResourceWarning -m unittest discover -s tests -v
+      - name: gates never crash-block on garbage input
+        run: echo "not json" | python gates/file_governance.py; test $? -eq 0
+      - name: one governed tick on a fresh home
+        run: |
+          export HEARTBEAT_HOME="$RUNNER_TEMP/hb"
+          ./heartbeat/tick.sh || true      # health may be red on CI runners; the tick must still record
+          python ledger/ledger.py verify
+          test "$(wc -l < "$HEARTBEAT_HOME/ledger/rounds.jsonl" | tr -d ' ')" = "1"

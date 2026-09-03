@@ -1,0 +1,30 @@
+{
+ "id": "law-003",
+ "incident": {
+  "when": "2026-07-22",
+  "what": "A release report claimed '130+ items'. A recount from a clean clone found 103.",
+  "signal": "Caught by a reviewer who recounted instead of trusting the number."
+ },
+ "root_cause": "Numbers were carried from memory across edits and never re-measured.",
+ "law": {
+  "text": "Every quantitative claim is measured at the moment it is written, by a command whose output is pasted next to the claim. Release verification is done from a clean clone, never from the working tree.",
+  "checks": [
+   "each number in a report has an adjacent command + output",
+   "release checks run in a fresh clone"
+  ]
+ },
+ "enforced_by": {
+  "kind": "procedure",
+  "ref": "docs/SPEC_INCIDENT_LAW.md#numbers"
+ },
+ "lineage": [
+  "incident:2026-07-22",
+  "law-003",
+  "procedure:docs/SPEC_INCIDENT_LAW.md#numbers"
+ ],
+ "legislated": {
+  "by": "maintainers",
+  "at": "2026-09-03T00:00:00+08:00"
+ },
+ "notes": "De-identified from a real operating incident. Names, systems and paths removed; the mechanism is kept."
+}

@@ -1,0 +1,32 @@
+{
+ "id": "law-002",
+ "incident": {
+  "when": "2026-07-26",
+  "what": "A session started inside another agent's workspace, auto-loaded that agent's identity file, and began writing as that agent. Later it drifted again to a third identity. Each individual round looked normal; only the whole run showed the drift.",
+  "signal": "Noticed by the operator reading the run end to end, not by any check."
+ },
+ "root_cause": "Identity was inferred from the working directory. Nothing verified it at wake-up.",
+ "law": {
+  "text": "Wake-up step zero is a lineage gate with five checks: identity, round continuity, chain lineage, corrupted variants, positional drift. No work before the gate passes.",
+  "checks": [
+   "entity.name in the new round equals the installation's configured agent",
+   "round == previous round + 1",
+   "prev_hash equals the stored hash of the previous round",
+   "no round in the last N carries a different entity.name"
+  ]
+ },
+ "enforced_by": {
+  "kind": "procedure",
+  "ref": "docs/ARCHITECTURE.md#wake-up"
+ },
+ "lineage": [
+  "incident:2026-07-26",
+  "law-002",
+  "procedure:docs/ARCHITECTURE.md#wake-up"
+ ],
+ "legislated": {
+  "by": "maintainers",
+  "at": "2026-09-03T00:00:00+08:00"
+ },
+ "notes": "De-identified from a real operating incident. Names, systems and paths removed; the mechanism is kept."
+}

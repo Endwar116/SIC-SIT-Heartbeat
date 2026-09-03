@@ -1,0 +1,30 @@
+{
+ "id": "law-008",
+ "incident": {
+  "when": "2026-09-03",
+  "what": "With delegated authority, the agent re-triaged 21 pending decisions and reclaimed 9 as its own to decide. Checking each against existing rules before acting revealed 3 of the 9 were not its to take: one was external-facing and reversed a freeze the operator had personally ordered; one was designed to require consensus of four parties; one required the operator's stamp because a standing rule forbids the agent from marking its own work complete.",
+  "signal": "Caught by a pre-execution provenance check, not by intuition; intuition was wrong 3 of 3 times."
+ },
+ "root_cause": "Authority was judged by category ('this feels internal') instead of by looking for rules already attached to the item.",
+ "law": {
+  "text": "Before claiming an item is yours to decide, look for a rule already bound to it in three places: hard rules in tools/code; standing orders and freezes (especially the operator's own); approval conditions written into the item's design ('requires consensus', 'awaiting sign-off'). Any hit => not yours; hand it back.",
+  "checks": [
+   "for each reclaimed item, the three places were searched and the result recorded",
+   "'decided' and 'executed' are listed separately so a wrong claim is caught before execution"
+  ]
+ },
+ "enforced_by": {
+  "kind": "procedure",
+  "ref": "docs/SPEC_INCIDENT_LAW.md#authority"
+ },
+ "lineage": [
+  "incident:2026-09-03",
+  "law-008",
+  "procedure:docs/SPEC_INCIDENT_LAW.md#authority"
+ ],
+ "legislated": {
+  "by": "maintainers",
+  "at": "2026-09-03T00:00:00+08:00"
+ },
+ "notes": "De-identified from a real operating incident. Names, systems and paths removed; the mechanism is kept."
+}

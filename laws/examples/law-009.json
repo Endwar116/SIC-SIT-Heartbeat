@@ -1,0 +1,30 @@
+{
+ "id": "law-009",
+ "incident": {
+  "when": "2026-09-03",
+  "what": "The agent's worker pool died on provider overload (HTTP 529). It fell back to doing all the work inline on the most expensive model, without probing cheaper rungs: the free cloud tier (already reported dead that morning by a colleague — the agent had not read the report), a local model daemon (present, unprobed), a cheaper cloud model (untried). It also did not tell the operator which rung it was on.",
+  "signal": "The operator, noticing the cost, asked why no cheaper dispatch was used."
+ },
+ "root_cause": "No fallback ladder existed as a procedure; the choice was made ad hoc under time pressure.",
+ "law": {
+  "text": "Dispatch follows an ordered ladder and each rung is probed, not assumed: workers -> free/cheap cloud -> local model -> cheaper cloud model -> flagship inline LAST. The rung actually used, and why the higher rungs failed, is written into the round. Flagship-inline is a disclosed exception, never a silent default.",
+  "checks": [
+   "each round that dispatched work names the rung used",
+   "a probe result exists for every rung skipped",
+   "colleague reports about provider status were read before choosing a rung"
+  ]
+ },
+ "enforced_by": {
+  "kind": "none-yet",
+  "ref": ""
+ },
+ "lineage": [
+  "incident:2026-09-03",
+  "law-009"
+ ],
+ "legislated": {
+  "by": "maintainers",
+  "at": "2026-09-03T00:00:00+08:00"
+ },
+ "notes": "De-identified from a real operating incident. Names, systems and paths removed; the mechanism is kept."
+}

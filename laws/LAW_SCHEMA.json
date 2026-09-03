@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Incident Law (SIC-SIT-Heartbeat)",
+  "description": "A law is an incident that has been turned into an enforceable rule, with the lineage kept. Laws from different incidents are parallel, not an evolution of one another.",
+  "type": "object",
+  "required": ["id", "incident", "root_cause", "law", "enforced_by", "lineage", "legislated"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^law-[0-9]{3,}$"},
+    "incident": {
+      "type": "object", "required": ["when", "what", "signal"],
+      "properties": {
+        "when": {"type": "string", "description": "ISO date"},
+        "what": {"type": "string", "description": "what actually happened, plain language"},
+        "signal": {"type": "string", "description": "how it was noticed (or why it was NOT noticed)"}
+      }
+    },
+    "root_cause": {"type": "string"},
+    "law": {
+      "type": "object", "required": ["text", "checks"],
+      "properties": {
+        "text": {"type": "string", "description": "the rule, imperative, one paragraph"},
+        "checks": {"type": "array", "items": {"type": "string"}, "description": "machine- or procedure-checkable conditions"}
+      }
+    },
+    "enforced_by": {
+      "type": "object", "required": ["kind"],
+      "properties": {
+        "kind": {"enum": ["gate", "procedure", "checker", "none-yet"]},
+        "ref": {"type": "string", "description": "path of the gate/checker/procedure that fires"}
+      }
+    },
+    "lineage": {"type": "array", "items": {"type": "string"}, "description": "incident-id -> law-id -> gate-id chain"},
+    "legislated": {"type": "object", "required": ["by", "at"], "properties": {"by": {"type": "string"}, "at": {"type": "string"}}},
+    "supersedes": {"type": "string"},
+    "notes": {"type": "string"}
+  }
+}

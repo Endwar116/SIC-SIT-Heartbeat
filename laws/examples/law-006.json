@@ -1,0 +1,31 @@
+{
+ "id": "law-006",
+ "incident": {
+  "when": "2026-09-03",
+  "what": "An operator who had delegated most decisions to an agent found 21 open decision cards waiting. Each card assumed the operator remembered the thread, knew the codenames, and could look things up. Their words: 'I keep not knowing which thing you mean; I do not have the capacity to go and find out.' They had said this several times before.",
+  "signal": "Repeated verbal complaints; eventually a count of the open cards."
+ },
+ "root_cause": "The old card format guaranteed four sections were present. It did not guarantee the card could be answered without lookup, and it set no limit on how many cards could be open.",
+ "law": {
+  "text": "A decision escalated to a human has five elements — what this is, why they (not the agent) decide, one-word options, what happens on silence, one recommendation — and at most three cards are open at once. A fourth is either decided by the agent with a receipt, or queued.",
+  "checks": [
+   "decision_card.py board <file> exits 0",
+   "open cards <= 3",
+   "no unexplained codenames in any card"
+  ]
+ },
+ "enforced_by": {
+  "kind": "gate",
+  "ref": "gates/decision_card.py"
+ },
+ "lineage": [
+  "incident:2026-09-03",
+  "law-006",
+  "gate:gates/decision_card.py"
+ ],
+ "legislated": {
+  "by": "maintainers",
+  "at": "2026-09-03T00:00:00+08:00"
+ },
+ "notes": "De-identified from a real operating incident. Names, systems and paths removed; the mechanism is kept."
+}

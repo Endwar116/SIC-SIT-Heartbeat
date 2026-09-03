@@ -1,0 +1,700 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sic-js:schema:4.0:candidate:v0.1",
+  "title": "SIC-JS 4.0 (revision 4.0.2)",
+  "description": "SIC-JS 4.0 round schema. Keeps the six semantic/normative primitives of 3.0 (entity, state, relation, event, intent, task) and adds three structural layers: execution (authority boundary), assurance (evidence and approval references — required when a task is marked completed), and extensions (namespaced, optional). Revision 4.0.2 relaxes execution/assurance to a minimal required set so that empty arrays are not mandatory.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sic_version",
+    "round",
+    "entity",
+    "state",
+    "relation",
+    "event",
+    "intent"
+  ],
+  "properties": {
+    "sic_version": {
+      "const": "4.0"
+    },
+    "task": {
+      "$ref": "#/$defs/task"
+    },
+    "execution": {
+      "$ref": "#/$defs/execution"
+    },
+    "round": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "entity": {
+      "$ref": "#/$defs/entity"
+    },
+    "state": {
+      "$ref": "#/$defs/state"
+    },
+    "relation": {
+      "$ref": "#/$defs/relation"
+    },
+    "assurance": {
+      "$ref": "#/$defs/assurance"
+    },
+    "event": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/eventObject"
+        }
+      ]
+    },
+    "intent": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/intentObject"
+        }
+      ]
+    },
+    "extensions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/extension"
+      },
+      "default": []
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "task"
+        ],
+        "properties": {
+          "task": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "const": "completed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "assurance"
+        ],
+        "properties": {
+          "assurance": {
+            "properties": {
+              "evidence_refs": {
+                "minItems": 1
+              },
+              "approval_refs": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "deliverable",
+        "status",
+        "created_round"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(?:[A-Z]+-)?[A-Z]{1,2}-[1-9][0-9]{0,2}$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "deliverable": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "in_progress",
+            "completed",
+            "dismissed",
+            "archived"
+          ]
+        },
+        "created_round": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "owner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "priority": {
+          "oneOf": [
+            {
+              "enum": [
+                "P0",
+                "P1",
+                "P2"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "time_horizon": {
+          "oneOf": [
+            {
+              "enum": [
+                "short",
+                "medium",
+                "long"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "model"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "origin": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "identity_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Optional external verifiable identity reference. SIC-JS does not validate the identity provider itself."
+        }
+      }
+    },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "context",
+        "current_action"
+      ],
+      "properties": {
+        "context": {
+          "type": "string"
+        },
+        "current_action": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Candidate reconciliation of v3.0 contradiction: null is legal but produces semantic_rupture WARN in the semantic validator."
+        },
+        "pending": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "typedLink": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "target_ref"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*:[A-Za-z][A-Za-z0-9._/-]*$",
+          "description": "Namespaced relation type, e.g. sic:depends_on or prov:wasDerivedFrom."
+        },
+        "target_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "user"
+      ],
+      "properties": {
+        "user": {
+          "type": "string",
+          "minLength": 1
+        },
+        "anchor_memory": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "linked_entities": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "upstream": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{16}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "links": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/typedLink"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "eventObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "timestamp",
+        "description"
+      ],
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string"
+        },
+        "trigger": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "intentObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "user_intent"
+      ],
+      "properties": {
+        "user_intent": {
+          "type": "string"
+        },
+        "system_intent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "core_question": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "ref"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "status"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "available",
+            "restricted",
+            "unavailable"
+          ]
+        },
+        "source_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "permission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action",
+        "effect",
+        "authority_ref"
+      ],
+      "properties": {
+        "action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "effect": {
+          "enum": [
+            "allow",
+            "deny"
+          ]
+        },
+        "authority_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resource_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scope": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "delegated_by": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "valid_until": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "enforcement_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Reference to the runtime/policy enforcement point. Declaration is not proof of enforcement."
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authority_refs",
+        "permissions"
+      ],
+      "properties": {
+        "authority_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/permission"
+          }
+        }
+      }
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref",
+        "kind"
+      ],
+      "properties": {
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authority"
+      ],
+      "properties": {
+        "workspaces": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/workspace"
+          }
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/capability"
+          }
+        },
+        "authority": {
+          "$ref": "#/$defs/authority"
+        },
+        "resources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/resource"
+          }
+        },
+        "policy_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "assurance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_refs",
+        "approval_refs"
+      ],
+      "properties": {
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "approval_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "verifier_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "integrity_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "extension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version",
+        "required",
+        "schema_ref",
+        "depends_on"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+/[a-z][a-z0-9-]*$",
+          "description": "Reverse-DNS-like vendor/name extension identifier, e.g. org.sic-sit/sca."
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "schema_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "state_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "config_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+/[a-z][a-z0-9-]*$"
+          },
+          "uniqueItems": true
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "required": {
+                "const": true
+              }
+            },
+            "required": [
+              "required"
+            ]
+          },
+          "then": {
+            "properties": {
+              "schema_ref": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

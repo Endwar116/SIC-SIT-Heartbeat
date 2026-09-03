@@ -1,0 +1,31 @@
+{
+ "id": "law-007",
+ "incident": {
+  "when": "2026-09-03",
+  "what": "Twice in one day the agent matched a signal to a remembered failure and acted without checking. (1) After a model switch it assumed its watchers had died — as had happened once before — and remounted them; the old ones were alive, producing duplicates. (2) It saw a scheduled job with a bad exit status and a missing log and declared 'this job never ran', informing the owner; the job's own run log showed 14 successful runs and a designed 12-run limit it had honoured.",
+  "signal": "Duplicate watcher ticks; the job owner's records contradicting the announcement."
+ },
+ "root_cause": "Peripheral signals (exit codes, presence of system logs, process lists) were used to close a diagnosis instead of to open one.",
+ "law": {
+  "text": "Peripheral signals open an investigation; they never close it. Before declaring a long-running thing dead, never-ran, or in need of restart, read the record it writes for itself, and rule out 'completed on purpose'.",
+  "checks": [
+   "the subject's own log/state file was read before any verdict",
+   "the 'finished by design' hypothesis was explicitly excluded",
+   "watcher registry was read before mounting a watcher"
+  ]
+ },
+ "enforced_by": {
+  "kind": "procedure",
+  "ref": "heartbeat/health.py"
+ },
+ "lineage": [
+  "incident:2026-09-03",
+  "law-007",
+  "procedure:heartbeat/health.py"
+ ],
+ "legislated": {
+  "by": "maintainers",
+  "at": "2026-09-03T00:00:00+08:00"
+ },
+ "notes": "De-identified from a real operating incident. Names, systems and paths removed; the mechanism is kept."
+}

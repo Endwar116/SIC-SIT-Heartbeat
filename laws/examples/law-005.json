@@ -1,0 +1,31 @@
+{
+ "id": "law-005",
+ "incident": {
+  "when": "2026-07-27",
+  "what": "A vector store's DELETE marked rows as tombstones. The database file did not shrink; orphan vectors stayed; a full table rebuild was required. Separately: embeddings are lossy but invertible, so 'we only store vectors' is not a privacy boundary.",
+  "signal": "A collaborator's field report on a SQLite vector extension."
+ },
+ "root_cause": "'Delete returned success' was taken to mean 'the data is gone'.",
+ "law": {
+  "text": "Acceptance of forgetting is measured, not reported: zero orphans, zero freelist growth, file size not increased. Vectors never leave the trust boundary and are encrypted at rest.",
+  "checks": [
+   "post-delete: orphan count == 0",
+   "post-delete: file size <= pre-delete size after vacuum",
+   "vector store is inside the same boundary as the raw text it encodes"
+  ]
+ },
+ "enforced_by": {
+  "kind": "checker",
+  "ref": "rollback/tombstone.py"
+ },
+ "lineage": [
+  "incident:2026-07-27",
+  "law-005",
+  "checker:rollback/tombstone.py"
+ ],
+ "legislated": {
+  "by": "maintainers",
+  "at": "2026-09-03T00:00:00+08:00"
+ },
+ "notes": "De-identified from a real operating incident. Names, systems and paths removed; the mechanism is kept."
+}
