@@ -56,7 +56,11 @@ def emphasis_problems(text):
     if opts and plain:
         bad.append(f"E2 option words not bold: {plain[:3]}")
     # E3: recommendation contains a bold option word that matches the table
-    rec = re.search(r"^[^\n]*(recommend|建議)[^\n]*$", text, re.I | re.M)
+    # the recommendation line: prefer a line that STARTS with bold Recommendation/建議; else the last line
+    # containing the keyword (the one-glance line may also contain it)
+    cands = re.findall(r"^[^\n]*(?:recommend|建議)[^\n]*$", text, re.I | re.M)
+    pref = [c for c in cands if re.match(r"^\s*\*\*(?:recommendation|我?建議)", c, re.I)]
+    rec = re.match(r".*", (pref or cands or [""])[-1])
     if rec:
         bold_in_rec = set(re.findall(r"\*\*(.+?)\*\*", rec.group(0)))
         table_words = {o.strip("* ") for o in opts}

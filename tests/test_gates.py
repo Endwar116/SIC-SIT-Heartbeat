@@ -91,6 +91,13 @@ class DecisionCard(unittest.TestCase):
         self.assertEqual(r.returncode, 1); self.assertIn("E1", r.stdout); self.assertIn("E2", r.stdout)
         self.assertEqual(run([ROOT / "gates/decision_card.py", "card", l], self.env).returncode, 0)
 
+    def test_one_glance_mentions_recommendation_word(self):
+        # the one-glance line may itself say "I recommend keep"; E3 must still read the real recommendation line
+        card = ("### Card 1\n**One glance: keep or drop — I recommend keep.**\n**What this is**: x.\n**Why you decide**: irreversible.\n"
+                "| reply | meaning |\n|---|---|\n| **keep** | k |\n| **drop** | d |\n**If you don't**: y.\n**Recommendation**: **keep**, fine.\n")
+        f = Path(self.home) / "c.md"; f.write_text(card)
+        self.assertEqual(run([ROOT / "gates/decision_card.py", "card", f], self.env).returncode, 0)
+
     def test_board_caps_at_three(self):
         card = "### Card {n}\n**One glance: a or not.**\n**What this is**: x.\n**Why you decide**: people.\n| reply | meaning |\n|---|---|\n| **a** | a |\n**If you don't**: y.\n**Recommendation**: **a**.\n"
         f = Path(self.home) / "board.md"; f.write_text("".join(card.format(n=i) for i in range(1, 5)))
