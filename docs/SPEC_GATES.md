@@ -44,6 +44,8 @@ answer to a determined agent. See THREAT_MODEL.
 | `prereg_gate.py` | `Workflow` (Bash wiring is deliberately not shipped: too many false positives on ordinary commands) | anything that looks like an experiment and references no *sealed* pre-registration | three benchmark rounds run without sealing one |
 | `decision_card.py` | (checker, not a hook) | a decision card missing any of five elements; more than three open cards | operator cognitive overload (law-006) |
 
+| `dispatch_rung.py` | `Agent` / `Workflow` (**opt-in**, warn by default) | a subagent dispatch whose prompt declares no `RUNG:` and reason | the worker pool died and the agent fell back to the flagship model silently (law-009) |
+
 ## Writing a new gate
 
 1. Start from an incident, not from a fear. Put the incident in the docstring.

@@ -15,16 +15,17 @@
   ]
  },
  "enforced_by": {
-  "kind": "none-yet",
-  "ref": ""
+  "kind": "checker",
+  "ref": "gates/dispatch_rung.py (opt-in, warn by default; HEARTBEAT_RUNG_STRICT=1 blocks)"
  },
  "lineage": [
   "incident:2026-09-03",
-  "law-009"
+  "law-009",
+  "checker:gates/dispatch_rung.py"
  ],
  "legislated": {
   "by": "maintainers",
   "at": "2026-09-02T16:00:00Z"
  },
- "notes": "De-identified from a real operating incident. Names, systems and paths removed; the mechanism is kept."
+ "notes": "De-identified from a real operating incident. Names, systems and paths removed; the mechanism is kept. Enforcement is disclosure, not judgement: the checker cannot know the right rung, only whether one was declared and why."
 }

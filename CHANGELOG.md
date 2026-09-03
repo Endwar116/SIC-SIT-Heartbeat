@@ -49,6 +49,8 @@ Tests: 45+. Still standard library only.
 
 ## Unreleased
 
+* `gates/dispatch_rung.py` (opt-in): dispatches must declare their ladder rung; law-009 moves from `none-yet` to `checker`. `law-011` (verify the shipped artifact). 48 tests.
+
 * **gates/decision_card.py** — salience checks E1–E3 (bold one-glance line, bold option words, recommendation
   bolds one option); `laws/examples/law-010.json` (refines law-006). Regex bug fixed: recommendation line is
   matched from line start, not from the keyword.
