@@ -108,3 +108,17 @@ Notify users who have cloned the old history; they should re-clone after the rew
 - **If you stage them by accident, rewrite history.** Deleting from HEAD is not enough.
 - **Scan all commits before publishing.** Use `git log -p` to verify, not just `git status HEAD`.
 - **This is a one-time check per repository.** After you publish, the history is part of the public record.
+
+
+## Hand-delivered bundles {#deliverables}
+
+If you ever ship a de-identified copy of a real installation (a zip to a colleague), three things bit us on the
+first day (law-011):
+
+1. **Scan the artifact, not the source.** Unpack the bundle and grep the whole thing. Keep an explicit
+   allow-list of the lines that may match (the LICENSE copyright, a scanner's own regex source) and abort on
+   anything else — with an explicit `exit 1`, not `set -e`.
+2. **The redaction log must not contain the redacted strings.** Record the category and a `sha256` prefix of
+   the original; the holder of the original environment can still reconcile, nobody else can.
+3. **A check instruction must not quote the forbidden pattern.** "Run `grep -rn "<secret words>"` before
+   publishing" puts the secret words in the document. Point at where the pattern lives instead.

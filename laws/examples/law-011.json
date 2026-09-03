@@ -1,0 +1,33 @@
+{
+ "id": "law-011",
+ "incident": {
+  "when": "2026-09-04",
+  "what": "A de-identified bundle was packaged three times before it was clean. (1) The delivery notes quoted, verbatim, the grep command from a governance ruling — a command whose pattern contains the very values the ruling forbids; the check instruction was itself the leak. (2) The redaction log listed every original string in a 'before' column: operator name, machine path prefix, a third party's name, a restricted symbol — the record of what was hidden un-hid it. (3) The scan ran over the source tree and skipped the redaction log and one tool by name; the scan that would have caught (2) was excluded by design, and a failing check did not stop the packaging step.",
+  "signal": "Scanning the packaged zip itself (unzip, then grep) instead of the source tree found 11 hits the tree scan had reported as zero."
+ },
+ "root_cause": "Verification ran on the input, not the output; the redaction record and the check instruction were treated as metadata exempt from the rule they served; a shell -e flag was trusted as a gate.",
+ "law": {
+  "text": "Verify the artifact you ship, not the tree you built it from: unpack the bundle and scan it whole, with an explicit allow-list of the few lines permitted to match (e.g. the LICENSE copyright). A redaction record must never contain the redacted strings — record category and a fingerprint. A check instruction must never quote the forbidden pattern it checks for. A failing check stops the pipeline by an explicit exit, not by a shell option.",
+  "checks": [
+   "the pre-ship scan reads the unpacked artifact, not the source tree",
+   "redaction log rows carry category + sha256 prefix, no original string",
+   "no doc in the bundle quotes the forbidden pattern literally",
+   "packaging aborts via explicit exit on any non-allow-listed hit"
+  ]
+ },
+ "enforced_by": {
+  "kind": "procedure",
+  "ref": "docs/THREAT_MODEL.md#deliverables"
+ },
+ "lineage": [
+  "incident:2026-09-04",
+  "law-011",
+  "procedure:docs/THREAT_MODEL.md#deliverables",
+  "refines:law-004"
+ ],
+ "legislated": {
+  "by": "maintainers",
+  "at": "2026-09-03T21:20:00Z"
+ },
+ "notes": "Refines law-004 (history is the product) from repositories to hand-delivered bundles."
+}
