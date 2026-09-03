@@ -46,7 +46,9 @@ class Smoke(unittest.TestCase):
         self.assertEqual(run([ROOT / "heartbeat/zombie.py", "check"], self.env).returncode, 0)
     def test_legislate_reads_examples_and_counts_debts(self):
         out = run([ROOT / "laws/legislate.py", "list"], self.env).stdout; self.assertIn("law-001", out); self.assertIn("law-010", out)
-        n = int(run([ROOT / "laws/legislate.py", "debts", "--count"], self.env).stdout.strip()); self.assertGreaterEqual(n, 1)  # law-005 is the one honest none-yet left
+        n = int(run([ROOT / "laws/legislate.py", "debts", "--count"], self.env).stdout.strip())
+        expected = sum(1 for f in (ROOT / "laws/examples").glob("law-*.json") if json.loads(f.read_text())["enforced_by"]["kind"] == "none-yet")
+        self.assertEqual(n, expected)   # computed from the law files, never hard-coded (the hard-coded bound broke twice as debts were paid)
         v = run([ROOT / "laws/legislate.py", "validate", ROOT / "laws/examples/law-005.json"], self.env); self.assertEqual(v.returncode, 0)
     def test_health_runs(self):
         r = run([ROOT / "heartbeat/health.py"], dict(self.env, HEARTBEAT_SERVICE_FILTER="^com\\.example\\.nothing$")); self.assertIn("checked", r.stdout)
@@ -79,3 +81,20 @@ class DispatchRung(unittest.TestCase):
         self.assertEqual(strict.returncode, 2)
         self.assertEqual(hook("dispatch_rung.py", {"tool_name": "Bash", "tool_input": {"command": "ls"}}, self.env).returncode, 0)
         log = (Path(self.home) / "state/gate_decisions.jsonl").read_text(); self.assertIn("rung declared", log); self.assertIn('"warned"', log)
+
+
+class ForgetCheck(unittest.TestCase):
+    def setUp(self): self.home, self.env = fresh_env()
+    def test_delete_without_vacuum_fails_then_passes(self):
+        import sqlite3
+        db = Path(self.home) / "v.sqlite"; con = sqlite3.connect(db)
+        con.execute("create table docs(id integer primary key, t text)"); con.execute("create table vec(doc_id int, e blob)")
+        con.executemany("insert into docs values(?,?)", [(i, "x" * 2000) for i in range(300)])
+        con.executemany("insert into vec values(?,?)", [(i, b"\0" * 512) for i in range(300)]); con.commit(); con.close()
+        self.assertEqual(run([ROOT / "rollback/forget_check.py", "baseline", db], self.env).returncode, 0)
+        con = sqlite3.connect(db); con.execute("delete from docs where id >= 100"); con.commit(); con.close()   # vec rows now orphaned
+        r = run([ROOT / "rollback/forget_check.py", "check", db, "--orphan-sql", "select count(*) from vec where doc_id not in (select id from docs)"], self.env)
+        self.assertEqual(r.returncode, 1); self.assertIn("orphans=200", r.stdout)
+        con = sqlite3.connect(db); con.execute("delete from vec where doc_id not in (select id from docs)"); con.commit(); con.close()
+        r2 = run([ROOT / "rollback/forget_check.py", "check", db, "--vacuum", "--orphan-sql", "select count(*) from vec where doc_id not in (select id from docs)"], self.env)
+        self.assertEqual(r2.returncode, 0, r2.stdout); self.assertIn("accepted", r2.stdout)

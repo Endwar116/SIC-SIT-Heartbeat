@@ -15,12 +15,13 @@
   ]
  },
  "enforced_by": {
-  "kind": "none-yet",
-  "ref": ""
+  "kind": "checker",
+  "ref": "rollback/forget_check.py"
  },
  "lineage": [
   "incident:2026-07-27",
-  "law-005"
+  "law-005",
+  "checker:rollback/forget_check.py"
  ],
  "legislated": {
   "by": "maintainers",
