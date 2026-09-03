@@ -22,13 +22,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _hook import read_payload, block, allow  # noqa: E402
+from _hook import read_payload, block, allow, guarded  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ledger"))
 import paths  # noqa: E402
 
 GATE = "prereg"
-TRIGGER = re.compile(r"benchmark|experiment|control[_ -]?arm|gold[_ -]?label|retriev|score\.py|"
-                     r"placebo|blind|treatment|baseline|ablation", re.I)
+TRIGGER = re.compile(r"\b(?:benchmark|ablation|control[_ -]?arm|gold[_ -]?labels?|placebo|treatment[_ -]arm|"
+                     r"retrieval[_ -](?:run|eval)|score\.py)\b.*\.(?:py|sh|json|ipynb|js)\b", re.I | re.S)
 PREREG_PATH = re.compile(r"[\w/.\-]*(?:FROZEN|prereg|preregist)[\w/.\-]*\.(?:md|json)", re.I)
 EXEMPT = re.compile(r"(?://|#)\s*PREREG-EXEMPT:\s*(.+)")
 
@@ -47,20 +47,25 @@ def sealed(path: str):
                                             ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
             return (want == got), ("machine seal verified" if want == got else "seal BROKEN: payload was modified")
     if os.path.exists(path + ".sha256"):
-        return True, "sidecar .sha256 present"
+        try:
+            want = open(path + ".sha256", encoding="utf-8").read().split()[0]
+            got = hashlib.sha256(open(path, "rb").read()).hexdigest()
+            return (want == got), ("sidecar digest verified" if want == got else "sidecar digest does NOT match the document")
+        except (OSError, IndexError):
+            return False, "sidecar unreadable"
     try:
         head = open(path, encoding="utf-8", errors="ignore").read(4000)
     except OSError as e:
         return False, f"unreadable ({e})"
-    if re.search(r"FROZEN|frozen_at|status:\s*FROZEN", head):
-        return True, "in-document FROZEN marker"
+    if re.search(r"^\s*(?:>\s*)?status:\s*FROZEN\b", head, re.M | re.I):
+        return True, "in-document `status: FROZEN` line"
     return False, "exists but no seal (no machine seal, no .sha256, no FROZEN marker)"
 
 
 def main():
-    p = read_payload()
-    if not p:
-        allow()
+    p, problem = read_payload()
+    if problem:
+        allow(GATE, f"unparseable payload allowed: {problem}")
     ti = p.get("tool_input") or {}
     text = ti.get("script") or ti.get("command") or ""
     if not text and ti.get("scriptPath") and os.path.exists(ti["scriptPath"]):
@@ -80,8 +85,9 @@ def main():
         except OSError:
             pass
         allow(GATE, "exempt: " + m.group(1).strip()[:80])
+    code_only = "\n".join(l for l in text.splitlines() if not re.match(r"^\s*(?://|#)", l))
     checked = []
-    for c in set(PREREG_PATH.findall(text)):
+    for c in set(PREREG_PATH.findall(code_only)):
         ok, why = sealed(c)
         checked.append((c, ok, why))
         if ok:
@@ -95,4 +101,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    guarded(GATE, main)

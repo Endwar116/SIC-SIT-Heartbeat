@@ -1,19 +1,24 @@
 #!/usr/bin/env python3
 """tombstone.py — soft delete with a paper trail, and the way back.
 
-Every "delete" in this system is:  move into TRASH/<date>_<name>/  +  write TOMBSTONE.md
-The tombstone answers, without the agent's memory: who, when, why, what was moved, how to undo.
-Restore = move it back. Nothing is destroyed until a HUMAN empties the trash (never the agent).
+Every "delete" is:  move into TRASH/<stamp>_<name>/  +  tombstone.json (machine truth)  +  TOMBSTONE.md (rendered).
+Restore reads ONLY tombstone.json. Nothing is destroyed until a HUMAN empties the trash.
+
+v2 (after adversarial review): restore used to parse the markdown, so a crafted --why could redirect a
+restore to an attacker-chosen path; symlinks were resolved and their targets trashed; two trashes of the
+same name within a second collided; the manifest was never re-verified after the move.
+  * metadata lives in tombstone.json; --why may not contain newlines or backticks
+  * symlinks are refused (trash the target explicitly if that is what you mean)
+  * entry names carry microseconds + a counter
+  * after the move the manifest is recomputed and compared; mismatch aborts loudly
 
   tombstone.py trash <path> --why "<one line>" [--by <actor>]
   tombstone.py restore <trash-entry-dir>
-  tombstone.py list
-  tombstone.py verify <trash-entry-dir>        # sha256 manifest still matches
+  tombstone.py list | verify <trash-entry-dir>
 """
 import argparse
 import hashlib
 import json
-import os
 import shutil
 import sys
 from datetime import datetime, timezone
@@ -32,84 +37,87 @@ def sha_file(p: Path) -> str:
 
 
 def manifest(root: Path):
-    out = {}
     if root.is_file():
         return {root.name: sha_file(root)}
-    for p in sorted(root.rglob("*")):
-        if p.is_file():
-            out[str(p.relative_to(root))] = sha_file(p)
-    return out
+    return {str(p.relative_to(root)): sha_file(p) for p in sorted(root.rglob("*")) if p.is_file() and not p.is_symlink()}
+
+
+def unique_entry(base: Path, name: str) -> Path:
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+    for n in range(1000):
+        e = base / (f"{ts}_{name}" if n == 0 else f"{ts}_{name}.{n}")
+        if not e.exists():
+            return e
+    raise SystemExit("❌ could not allocate a unique trash entry")
 
 
 def trash(src: str, why: str, by: str):
-    s = Path(src).expanduser().resolve()
+    if "\n" in why or "`" in why:
+        sys.exit("❌ --why must be one line without backticks")
+    s = Path(src).expanduser().absolute()
+    if s.is_symlink():
+        sys.exit(f"❌ {s} is a symlink → refusing (would you trash the link or its target? say which explicitly)")
     if not s.exists():
         sys.exit(f"❌ {s} does not exist")
     paths.ensure_dirs()
-    ts = datetime.now(timezone.utc).astimezone()
-    entry = paths.TRASH / f"{ts.strftime('%Y-%m-%d_%H%M%S')}_{s.name}"
-    entry.mkdir(parents=True)
-    man = manifest(s)
+    entry = unique_entry(paths.TRASH, s.name); entry.mkdir(parents=True)
+    man_before = manifest(s)
     dest = entry / s.name
     shutil.move(str(s), str(dest))
-    (entry / "MANIFEST.sha256.json").write_text(json.dumps(man, indent=1), encoding="utf-8")
-    (entry / "TOMBSTONE.md").write_text(f"""# Tombstone
-
-- **what**: `{s}`
-- **moved to**: `{dest}`
-- **when**: {ts.isoformat(timespec='seconds')}
-- **by**: {by}
-- **why**: {why}
-- **files**: {len(man)}  (sha256 manifest alongside)
-- **restore**: `python3 rollback/tombstone.py restore "{entry}"`
-- **policy**: nothing here is destroyed by an agent. A human empties the trash after 30 days.
-""", encoding="utf-8")
+    man_after = manifest(dest)
+    if man_after != man_before:
+        sys.exit(f"❌ manifest changed during move ({len(set(man_before) ^ set(man_after))} paths differ) — investigate {entry}")
+    meta = {"what": str(s), "moved_to": str(dest), "when": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "by": by, "why": why, "files": len(man_after), "manifest": man_after, "restored": None}
+    (entry / "tombstone.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
+    (entry / "TOMBSTONE.md").write_text(
+        f"# Tombstone\n\n- **what**: `{s}`\n- **when**: {meta['when']}\n- **by**: {by}\n- **why**: {why}\n"
+        f"- **files**: {meta['files']} (sha256 manifest in tombstone.json)\n"
+        f"- **restore**: `python3 rollback/tombstone.py restore \"{entry}\"`\n"
+        f"- **policy**: nothing here is destroyed by an agent; a human empties the trash after 30 days.\n", encoding="utf-8")
     print(f"✅ moved to trash: {entry}\n   restore with: tombstone.py restore \"{entry}\"")
     return entry
 
 
+def load_meta(entry: Path):
+    mj = entry / "tombstone.json"
+    if not mj.exists():
+        sys.exit(f"❌ not a trash entry (no tombstone.json): {entry}")
+    return json.loads(mj.read_text(encoding="utf-8")), mj
+
+
 def restore(entry: str):
-    e = Path(entry).expanduser().resolve()
-    tomb = e / "TOMBSTONE.md"
-    if not tomb.exists():
-        sys.exit(f"❌ not a trash entry (no TOMBSTONE.md): {e}")
-    orig = None
-    for line in tomb.read_text(encoding="utf-8").splitlines():
-        if line.startswith("- **what**:"):
-            orig = Path(line.split("`")[1])
-    if not orig:
-        sys.exit("❌ tombstone has no original path")
-    payload = [p for p in e.iterdir() if p.name not in ("TOMBSTONE.md", "MANIFEST.sha256.json")]
-    if len(payload) != 1:
-        sys.exit(f"❌ expected exactly one payload in {e}, found {len(payload)}")
+    e = Path(entry).expanduser().absolute()
+    meta, mj = load_meta(e)
+    if meta.get("restored"):
+        sys.exit(f"❌ already restored at {meta['restored']}")
+    orig, payload = Path(meta["what"]), Path(meta["moved_to"])
+    if not payload.exists():
+        sys.exit(f"❌ payload missing: {payload}")
+    if manifest(payload) != meta["manifest"]:
+        sys.exit("❌ payload manifest does not match tombstone.json — refusing to restore tampered content")
     if orig.exists():
         sys.exit(f"❌ {orig} already exists — refusing to overwrite; move it aside first")
     orig.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(str(payload[0]), str(orig))
-    (e / "RESTORED.md").write_text(f"restored to `{orig}` at {datetime.now(timezone.utc).astimezone().isoformat(timespec='seconds')}\n",
-                                   encoding="utf-8")
+    shutil.move(str(payload), str(orig))
+    meta["restored"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    mj.write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"✅ restored -> {orig}")
 
 
 def verify(entry: str) -> bool:
-    e = Path(entry).expanduser().resolve()
-    want = json.loads((e / "MANIFEST.sha256.json").read_text(encoding="utf-8"))
-    payload = [p for p in e.iterdir() if p.name not in ("TOMBSTONE.md", "MANIFEST.sha256.json", "RESTORED.md")]
-    if not payload:
+    e = Path(entry).expanduser().absolute(); meta, _ = load_meta(e)
+    if meta.get("restored"):
         print("(payload already restored)"); return True
-    got = manifest(payload[0])
-    ok = want == got
-    print("✅ manifest matches" if ok else f"❌ manifest mismatch: {set(want) ^ set(got) or 'content changed'}")
-    return ok
+    ok = manifest(Path(meta["moved_to"])) == meta["manifest"]
+    print("✅ manifest matches" if ok else "❌ manifest mismatch"); return ok
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    sub = ap.add_subparsers(dest="cmd", required=True)
+    ap = argparse.ArgumentParser(); sub = ap.add_subparsers(dest="cmd", required=True)
     t = sub.add_parser("trash"); t.add_argument("path"); t.add_argument("--why", required=True); t.add_argument("--by", default=paths.AGENT_NAME)
     r = sub.add_parser("restore"); r.add_argument("entry")
-    v = sub.add_parser("verify"); v.add_argument("entry")
-    sub.add_parser("list")
+    v = sub.add_parser("verify"); v.add_argument("entry"); sub.add_parser("list")
     a = ap.parse_args()
     if a.cmd == "trash": trash(a.path, a.why, a.by)
     elif a.cmd == "restore": restore(a.entry)
@@ -117,8 +125,9 @@ def main():
     elif a.cmd == "list":
         paths.ensure_dirs()
         for e in sorted(paths.TRASH.iterdir()):
-            if (e / "TOMBSTONE.md").exists():
-                print(("♻️ " if (e / "RESTORED.md").exists() else "🗑 ") + e.name)
+            if (e / "tombstone.json").exists():
+                m = json.loads((e / "tombstone.json").read_text(encoding="utf-8"))
+                print(("♻️ " if m.get("restored") else "🗑 ") + e.name + f"  ← {m['what']}")
 
 
 if __name__ == "__main__":

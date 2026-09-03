@@ -20,7 +20,7 @@ Practical:
 * Standard library only. A dependency needs a reason written into the PR.
 * Gates must allow on parse failure and finish in well under 500 ms.
 * `python -W error::ResourceWarning -m unittest discover -s tests` must pass on 3.9 and 3.12.
-* De-identify. No personal names, no machine paths, no organisation-internal constants in
-  code, docs, tests, or commit messages.
+* De-identify. No personal names (the copyright holder in LICENSE is the one deliberate exception), no machine
+  paths, no organisation-internal constants in code, docs, tests, or commit messages. Use UTC timestamps.
 
 By contributing you agree your contribution is licensed under the MIT License.

@@ -8,7 +8,7 @@ Python 3.9+ standard library only. No pip.
 All three share `~/.claude/settings.json`, so one install covers them:
 
 ```bash
-git clone https://github.com/<you>/SIC-SIT-Heartbeat && cd SIC-SIT-Heartbeat
+git clone https://github.com/Endwar116/SIC-SIT-Heartbeat && cd SIC-SIT-Heartbeat
 ./install/install.sh            # backs up settings.json, adds three PreToolUse hooks
 python3 ledger/ledger.py verify # ✅ chain intact — 0 rounds
 ./heartbeat/tick.sh             # one governed tick; prints an anchor line
@@ -62,7 +62,13 @@ edit the paths, then `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/co
 | `HEARTBEAT_STALE_HOURS` | `24` | when a periodic job's log counts as stale |
 | `HEARTBEAT_EXTERNAL_PREFIXES` | `/Volumes/,/mnt/,/media/` | log paths considered external |
 
+## Moving the repo
+
+Hooks embed the absolute clone path. A missing hook target exits 127, which the harness treats as
+*non-blocking* — the gate is silently off. After moving: `./install/install.sh` again, or check with
+`./install/install.sh --check` (also run by `heartbeat/health.py`).
+
 ## Uninstall
 
-Remove the three `PreToolUse` entries from `settings.json` (a `.bak_*` copy sits next to it) and
-delete nothing else — your ledger and trash are yours.
+`./install/install.sh --uninstall` removes only the hook entries that point into this repo (a `.bak_*`
+copy of settings.json is kept). Your ledger and trash are yours.

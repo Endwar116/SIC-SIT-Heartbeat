@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# run_loop.sh — keep ticking. Works as:
-#   * a foreground loop        : ./heartbeat/run_loop.sh 3600
-#   * a Claude Code Monitor    : Monitor(command: "./heartbeat/run_loop.sh 3600")  (each line = one event)
-#   * cron                     : 0 * * * * /path/heartbeat/tick.sh   (use tick.sh directly, not this loop)
-#   * launchd                  : see install/launchd/  (StartInterval, log paths on the INTERNAL disk)
-# Prints exactly one line per tick, so a watcher can turn each into a notification.
+# run_loop.sh — keep ticking. Works as a foreground loop, a Claude Code Monitor command, or under launchd.
+# Registers itself in the watcher registry on start and marks itself stopped on exit, so
+# gates/monitor_dedup.py can refuse a second identical loop.
 INTERVAL="${1:-3600}"
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; ROOT="$(dirname "$HERE")"
+export HEARTBEAT_HOME="${HEARTBEAT_HOME:-$HOME/.sic-sit-heartbeat}"; mkdir -p "$HEARTBEAT_HOME/logs"
+ID="loop-$$-$(date +%s)"
+python3 "$ROOT/gates/monitor_dedup.py" register "$ID" "run_loop.sh $INTERVAL" --desc "heartbeat loop every ${INTERVAL}s" >/dev/null 2>&1 || true
+TMP="$(mktemp "$HEARTBEAT_HOME/logs/.tick.XXXXXX")"
+cleanup() { python3 "$ROOT/gates/monitor_dedup.py" stop "$ID" >/dev/null 2>&1 || true; [ -f "$TMP" ] && mv "$TMP" "$HEARTBEAT_HOME/logs/last_tick.log" 2>/dev/null; }
+trap cleanup EXIT INT TERM
 while true; do
-  if "$HERE/tick.sh" >/tmp/.sic_tick.$$ 2>&1; then
-    echo "💓 tick $(date +%H:%M) ok — $(tail -1 /tmp/.sic_tick.$$)"
-  else
-    echo "🔴 tick $(date +%H:%M) RED — $(tail -1 /tmp/.sic_tick.$$)"
-  fi
+  if "$HERE/tick.sh" >"$TMP" 2>&1; then echo "💓 tick $(date +%H:%M) ok — $(tail -1 "$TMP")"
+  else echo "🔴 tick $(date +%H:%M) RED — $(tail -1 "$TMP")"; fi
   sleep "$INTERVAL"
 done

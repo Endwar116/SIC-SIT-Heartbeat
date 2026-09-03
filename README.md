@@ -2,7 +2,7 @@
 
 **Leave an agent running overnight. Come back. Audit every tick, roll back any deletion, and see exactly which file and which rule need to change.**
 
-[![CI](https://img.shields.io/badge/tests-20%20passing-brightgreen)](.github/workflows/ci.yml)
+[![tests](https://github.com/Endwar116/SIC-SIT-Heartbeat/actions/workflows/ci.yml/badge.svg)](https://github.com/Endwar116/SIC-SIT-Heartbeat/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.9%2B%20stdlib%20only-informational)
 
@@ -15,15 +15,16 @@ standard library. English docs; [繁體中文](README.zh-TW.md).
 ## The problem
 
 An autonomous agent on a heartbeat wakes up at 3 a.m. and acts. Nobody is watching. Existing tools
-record what it did (well — see [Prior art](docs/PRIOR_ART.md)). Almost none of them:
+record what it did, and [Gryph](https://github.com/safedep/gryph) can also block by policy before it
+runs (see [Prior art](docs/PRIOR_ART.md)). What we could not find anywhere:
 
-* stop a destructive command **before** it runs,
 * make the record **tamper-evident**, so the agent cannot quietly fix its own history,
 * make deletion **reversible** by default,
 * treat the **tick itself** as the unit of governance, or
 * turn the incident that happened last night into a **rule that fires** tomorrow.
 
-This repository does those five things, as small standard-library Python you can read in an afternoon.
+This repository does those four things, as small standard-library Python you can read in an afternoon — and
+ships its own deletion gate because we wanted the gate decisions to land in the same ledger as the ticks.
 
 ## What you get after a night of unattended ticks
 
@@ -97,12 +98,14 @@ checkable conditions and a named enforcer (or an honest `none-yet`). Two to read
 * **law-008** — before deciding something under delegated authority, look for a rule already bound to
   it (code, standing orders, design-time approval conditions). Intuition was wrong 3 of 3 times.
 
-The pipeline is a tool, not a document: `python3 laws/legislate.py new --what ... --text ... --check ... --enforce gate --ref gates/x.py`.
+The pipeline is a tool, not a document: `python3 laws/legislate.py new --what ... --signal ... --cause ... --text ... --check ... --enforce gate --ref gates/x.py`.
 
 ## Prior art, honestly
 
-If you only need after-the-fact logging of file/tool/command activity across many agents, use
-[Gryph](https://github.com/safedep/gryph) — it does that better than this repository will.
+If you need every file/tool/command action recorded across eight agents, or policy-based blocking at
+pre-tool time, use [Gryph](https://github.com/safedep/gryph) — it does both better than this repository will.
+What this adds over Gryph: a hash-chained per-tick ledger, reversible deletes with tombstones, the governed
+heartbeat itself, and the incident→law→gate pipeline.
 The architecture here is a reference implementation of two published designs — an external
 governance checkpoint before target-system mutation ([AgentBound](https://arxiv.org/html/2606.30970))
 and hash-chained tamper-evident logging with verify-or-halt ([Aegis](https://arxiv.org/html/2603.16938v1))
@@ -125,7 +128,7 @@ competitors but as the projects this one is designed to sit next to:
 * **[Gryph](https://github.com/safedep/gryph)** (SafeDep, Apache-2.0) — the best local-first audit trail
   for coding agents we know of. If you install one thing today, install Gryph. We built the gate-and-ledger
   layer *because* Gryph already owns "record everything" — see [INTEROP.md](docs/INTEROP.md).
-* **[halo-record](https://github.com/bkuan001/halo-record)** — an append-only, hash-chained record with
+* **[halo-record](https://github.com/bkuan001/halo-record)** (Apache-2.0) — an append-only, hash-chained record with
   redaction before write, as a one-line Python wrapper. Our ledger shares its integrity idea; their
   redaction discipline is something we should adopt.
 * **[heartbeat-agent-framework](https://github.com/muxueqingze/heartbeat-agent-framework)** (MIT) — the
@@ -140,7 +143,8 @@ If your project belongs on this list, open a PR that adds it — with a line on 
 
 ## Status
 
-`v0.1.0`. Used in daily operation by the maintainers on macOS; Linux paths are best-effort;
+`v0.2.0`. `v0.1.0` was withdrawn after an adversarial review found the deletion gate bypassable and the ledger
+under-hashed (see CHANGELOG). Used in daily operation by the maintainers on macOS; Linux paths are best-effort;
 Windows is not supported. Standard library only; tests run on 3.9–3.12. The hash chain is
 tamper-**evident**, not tamper-proof — read the [threat model](docs/THREAT_MODEL.md) before relying on it.
 

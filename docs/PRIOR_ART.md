@@ -1,14 +1,14 @@
 # Prior Art and Positioning
 
-This project does not replace existing audit-trail tools; it composes with them. If your primary need is after-the-fact logging of file reads, tool calls, and command execution across multiple agents, **[Gryph](https://github.com/safedep/gryph)** (Apache-2.0, ~1.5k stars) is the better choice. Gryph integrates natively with Claude Code, Cursor, Gemini CLI, and other agent platforms without wrapper overhead, and its SQLite-backed logging is production-ready. This project and Gryph can run side-by-side; they solve complementary problems.
+This project does not replace existing audit-trail tools; it composes with them. If your primary need is recording every file/tool/command action across many agents — **or policy-based blocking at pre-tool time** — use Gryph; it does both and supports eight agents.
 
 ## Capability Matrix
 
 | Project | Scheduled Heartbeat | Audit Trail | Tamper-Evident (Hash Chain) | Rollback | Pre-Execution Blocking Gate | Incident→Law Pipeline | License |
 |---------|:-:|:-:|:-:|:-:|:-:|:-:|---|
 | heartbeat-agent-framework | ✅ 30-min tick | Weak (markdown, self-clearing) | ❌ | ❌ | ❌ | ❌ | MIT |
-| **Gryph** | ❌ | ✅ Strong (SQLite: files, MCP, commands) | ❌ | ❌ View-only | ❌ Mark, no block | ❌ | Apache 2.0 |
-| halo-record | ❌ | ✅ Append-only | ✅ Per-line hash chain | ❌ | ❌ | ❌ | Unspecified |
+| **Gryph** | ❌ | ✅ Strong (SQLite: files, MCP, commands; 8 agents) | ❌ not stated | ❌ View/diff only | ✅ **Yes** — YAML rules block/warn/guide/allow at pre-tool time ("Blocked actions never reach the agent's tool") | ❌ | Apache-2.0 |
+| halo-record | ❌ | ✅ Append-only | ✅ Per-line hash chain | ❌ | ❌ | ❌ | Apache-2.0 |
 | CortexIDE | ❌ | ✅ JSONL | Unknown | ✅ File checkpoints | Partial | ❌ | Proprietary |
 | AgentBound (paper) | ❌ | ✅ Governance log | Unknown | ❌ | ✅ Pre-mutation gate | ❌ | — |
 | Aegis (paper) | ❌ | ✅ Hash-chained | ✅ Verify-or-halt protocol | ❌ | ✅ Gated ops | ❌ | — |
@@ -22,7 +22,7 @@ This project implements published frameworks for autonomous-agent governance:
 
 - **Aegis** ([arXiv 2603.16938](https://arxiv.org/html/2603.16938v1)) introduces cryptographic execution-time governance: hash-chained tamper-evident records coupled with verify-or-halt semantics. This project adopts the same ledger approach for its state transitions.
 
-Where this project departs from the literature: it treats the autonomous *period itself* (each scheduled tick) as a governed unit subject to the same chain and gate mechanisms. Literature governance targets discrete *actions*; here, the heartbeat interval is a ledger round with its own integrity proof and decision checkpoint. Additionally, this project implements an incident-to-law-to-gate pipeline absent from published work: each execution failure produces a learned rule that automatically becomes part of the next period's blocking gates, with full lineage from failure case to generated rule to gate application.
+Where this project departs from the literature: it treats the autonomous *period itself* (each scheduled tick) as a governed unit subject to the same chain and gate mechanisms. Literature governance targets discrete *actions*; here, the heartbeat interval is a ledger round with its own integrity proof and decision checkpoint. Additionally, this project implements an incident-to-law-to-gate pipeline absent from published work: each execution failure produces a learned rule that is written down with its lineage and, once someone writes the gate, enforced — the pipeline is manual by design, with full lineage from failure case to generated rule to gate application.
 
 ## Non-Goals
 
@@ -40,3 +40,11 @@ Where this project departs from the literature: it treats the autonomous *period
 - [Cryptographic Runtime Governance for Autonomous AI Systems: The Aegis Architecture for Verifiable Policy Enforcement](https://arxiv.org/html/2603.16938v1) — Hash-chained tamper-evident logging with verify-or-halt
 - [IMDA Agentic AI Governance Framework](https://www.imda.gov.sg) — National governance requirements for autonomous agents (Singapore, 2026-01)
 - [DEMM-Bench: A Benchmark for Evidence-Sufficient Governance of Autonomous Agents](https://arxiv.org/pdf/2606.20634) — Evaluation framework for execution-time governance mechanisms
+
+## Correction (2026-09-04)
+
+An earlier version of this page said Gryph only "marks, does not block" and quoted "~1.5k stars", both taken from a
+third-party blog post. Reading Gryph's own README: it **does** block at pre-tool time via YAML rules, and showed 161 stars.
+Corrected here per our own law-003 (numbers are measured at the source). What this repository adds over Gryph is
+therefore narrower and more precise: a hash-chained per-tick ledger, reversible deletes with tombstones, the governed
+heartbeat itself, and the incident→law→gate pipeline.

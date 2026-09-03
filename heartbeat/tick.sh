@@ -25,6 +25,8 @@ run_check services "$PY" "$HERE/health.py"
 run_check zombies  "$PY" "$HERE/zombie.py" check
 inbox_n=$(find "$INBOX" -maxdepth 1 -type f 2>/dev/null | wc -l | tr -d ' ')
 notes+=("inbox:$inbox_n")
+debts=$("$PY" "$ROOT/laws/legislate.py" debts --count 2>/dev/null || echo "?")
+notes+=("laws_debts:$debts")
 
 summary="$(IFS=' '; echo "${notes[*]}")"
 "$PY" "$ROOT/ledger/derive.py" \
@@ -32,7 +34,7 @@ summary="$(IFS=' '; echo "${notes[*]}")"
   --action "tick: $summary" \
   --trigger "scheduler" \
   --system-intent "governed periodic check; record, do not invent work" \
-| "$PY" "$ROOT/ledger/ledger.py" append - || { echo "❌ could not record the tick"; exit 3; }
+| "$PY" "$ROOT/ledger/ledger.py" append - --auto-round || { echo "❌ could not record the tick"; exit 3; }
 
 echo "tick: $summary"
 exit $red

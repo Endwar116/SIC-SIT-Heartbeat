@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _hook import read_payload, block, allow  # noqa: E402
+from _hook import read_payload, block, allow, guarded  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ledger"))
 import paths  # noqa: E402
 
@@ -29,7 +29,7 @@ def fingerprint(cmd: str):
     c = (cmd or "").lower()
     loop = bool(re.search(r"while\s+true|while\s+:|for\s*\(\(\s*;;", c))
     m = re.search(r"sleep\s+(\d+)", c)
-    topic = "heartbeat" if re.search(r"heartbeat|tick|心跳", c) else ("tail" if "tail -f" in c.replace("-F", "-f") else "")
+    topic = "heartbeat" if re.search(r"\b(?:heartbeat|tick)\b|心跳", c) else ("tail" if re.search(r"\btail\s+-[fF]\b", c) else "")
     return (loop, m.group(1) if m else None, topic)
 
 
@@ -58,9 +58,27 @@ def active_entries():
     return [r for r in latest.values() if r.get("status") == "active"]
 
 
+def register(task_id, cmd, desc="", status="active"):
+    paths.ensure_dirs()
+    with open(paths.WATCHER_REGISTRY, "a", encoding="utf-8") as f:
+        f.write(json.dumps({"ts": __import__("datetime").datetime.now().astimezone().isoformat(timespec="minutes"),
+                            "task_id": task_id, "cmd": cmd, "desc": desc, "status": status}, ensure_ascii=False) + "\n")
+
+
 def main():
-    p = read_payload()
-    if not p or p.get("tool_name") not in WATCHER_TOOLS:
+    argv = sys.argv[1:]
+    if argv and argv[0] in ("register", "stop"):
+        # CLI use: monitor_dedup.py register <task_id> "<exact command>" [--desc "..."]  |  stop <task_id>
+        if argv[0] == "register" and len(argv) >= 3:
+            desc = argv[argv.index("--desc") + 1] if "--desc" in argv else ""
+            register(argv[1], argv[2], desc); print(f"registered {argv[1]}"); sys.exit(0)
+        if argv[0] == "stop" and len(argv) >= 2:
+            register(argv[1], "", "", "stopped"); print(f"stopped {argv[1]}"); sys.exit(0)
+        print(__doc__); sys.exit(2)
+    p, problem = read_payload()
+    if problem:
+        allow(GATE, f"unparseable payload allowed: {problem}")
+    if p.get("tool_name") not in WATCHER_TOOLS:
         allow()
     cmd = (p.get("tool_input") or {}).get("command", "") or ""
     if not cmd:
@@ -70,7 +88,8 @@ def main():
     for r in active_entries():
         rn = norm(r.get("cmd", ""))
         same_shape = fp[0] and fp[2] and fingerprint(r.get("cmd", "")) == fp
-        if rn == n or (len(n) > 20 and rn and rn in n) or same_shape:
+        same_tokens = rn and set(rn.split()) == set(n.split())
+        if rn == n or same_tokens or same_shape:
             block(
                 f"an equivalent watcher is already registered as active.\n"
                 f"   existing: task_id={r.get('task_id')} desc={r.get('desc')} since {r.get('ts')}\n"
@@ -81,4 +100,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    guarded(GATE, main)

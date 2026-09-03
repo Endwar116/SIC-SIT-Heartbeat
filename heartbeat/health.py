@@ -27,8 +27,9 @@ from datetime import datetime
 from pathlib import Path
 
 EXTERNAL_PREFIXES = tuple(os.environ.get("HEARTBEAT_EXTERNAL_PREFIXES", "/Volumes/,/mnt/,/media/").split(","))
-LABEL_FILTER = re.compile(os.environ.get("HEARTBEAT_SERVICE_FILTER", r".*"))
-OK_EXITS = {0, -15}
+_FILTER_ENV = os.environ.get("HEARTBEAT_SERVICE_FILTER")
+LABEL_FILTER = re.compile(_FILTER_ENV) if _FILTER_ENV else None   # None => only jobs with a plist in ~/Library/LaunchAgents
+OK_EXITS = {0, -15, -9}
 
 
 def macos_jobs():
@@ -43,9 +44,12 @@ def macos_jobs():
         if len(parts) < 3:
             continue
         pid, status, label = parts[0], parts[1], parts[2].strip()
-        if not LABEL_FILTER.search(label):
-            continue
         plist = la / f"{label}.plist"
+        if LABEL_FILTER is None:
+            if not plist.exists():
+                continue
+        elif not LABEL_FILTER.search(label):
+            continue
         d = None
         if plist.exists():
             try:
@@ -67,11 +71,34 @@ def linux_jobs():
     jobs = []
     for line in out.splitlines():
         cols = line.split()
-        if len(cols) < 4 or not LABEL_FILTER.search(cols[0]):
+        if len(cols) < 4 or (LABEL_FILTER and not LABEL_FILTER.search(cols[0])):
             continue
+        if cols[2] not in ("failed", "active"):
+            continue                                  # inactive/dead timers are not failures
         jobs.append({"label": cols[0], "running": cols[3] == "running", "status": "0" if cols[2] == "active" else "1",
                      "conf": None, "log": None, "err": None, "periodic": cols[0].endswith(".timer")})
     return jobs
+
+
+def hook_targets_missing():
+    """A hook whose command file is gone exits 127, which the harness treats as non-blocking: the gate is silently off."""
+    import json
+    missing = []
+    for sp in (Path.home() / ".claude/settings.json",):
+        if not sp.exists():
+            continue
+        try:
+            d = json.loads(sp.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        for ent in (d.get("hooks", {}) or {}).get("PreToolUse", []) or []:
+            for h in ent.get("hooks", []) or []:
+                cmd = h.get("command", "")
+                parts = cmd.split()
+                for tok in parts[1:2]:
+                    if tok.endswith(".py") and not os.path.exists(os.path.expanduser(tok)):
+                        missing.append(f"{ent.get('matcher')}: {tok}")
+    return missing
 
 
 def main():
@@ -101,6 +128,8 @@ def main():
                     issues.append(f"log stale for {age_h/24:.0f} days => ran once, then stopped")
         if issues:
             problems.append((j["label"], j["running"], issues))
+    for m in hook_targets_missing():
+        problems.append((f"hook {m}", False, ["gate command file missing => the gate is silently OFF (exit 127 is non-blocking)"]))
     print(f"checked {len(jobs)} services, {len(problems)} with problems")
     for label, running, issues in problems:
         print(f"⚠️ {label}{' (process running)' if running else ''}")

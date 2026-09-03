@@ -637,7 +637,7 @@
         "id": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+/[a-z][a-z0-9-]*$",
-          "description": "Reverse-DNS-like vendor/name extension identifier, e.g. org.sic-sit/sca."
+          "description": "Reverse-DNS-like vendor/name extension identifier, e.g. org.sic-sit/example-ext."
         },
         "version": {
           "type": "string",

@@ -8,15 +8,14 @@
 
 ## 這在解什麼問題
 
-一個自主 agent 凌晨三點醒來做事，沒人在看。現有工具很會**記錄**它做了什麼（真的很會，見[先前技術](docs/PRIOR_ART.md)）。但幾乎沒有工具會：
+一個自主 agent 凌晨三點醒來做事，沒人在看。現有工具很會**記錄**它做了什麼，[Gryph](https://github.com/safedep/gryph) 還能照政策在執行前擋（見[先前技術](docs/PRIOR_ART.md)）。我們找不到任何工具做這四件：
 
-* 在破壞性指令**執行前**擋下它
 * 讓紀錄**防竄改**，讓 agent 沒辦法悄悄修掉自己的歷史
 * 讓刪除**預設可回滾**
 * 把**那一拍本身**當成治理單位
 * 把昨晚出的事故，變成明天**會真的擋人的規則**
 
-這個 repo 做這五件事，用的是一個下午就能讀完的標準函式庫 Python。
+這個 repo 做這四件事，用的是一個下午就能讀完的標準函式庫 Python——另外自帶一道刪除閘，因為我們要閘的決定跟每一拍記在同一本帳上。
 
 ## 跑了一晚之後你拿到什麼
 
@@ -82,11 +81,11 @@ python3 -m unittest discover -s tests
 * **law-007** — 外圍訊號（離開碼、日誌不在、程序清單）只能**開啟**調查；只有當事人自己寫的紀錄能**結案**。判「死了」之前先排除「做完收工」。
 * **law-008** — 用被授權的權力做決定之前，先找有沒有規則已經綁在那件事上（程式碼、既有命令、設計時寫的核准條件）。直覺三次全錯。
 
-管線是工具不是文件：`python3 laws/legislate.py new --what ... --text ... --check ... --enforce gate --ref gates/x.py`。
+管線是工具不是文件：`python3 laws/legislate.py new --what ... --signal ... --cause ... --text ... --check ... --enforce gate --ref gates/x.py`。
 
 ## 先前技術，講實話
 
-如果你只需要**事後**記錄多個 agent 的檔案／工具／指令活動，請用 [Gryph](https://github.com/safedep/gryph)——它做這件事比這個 repo 好。
+如果你要的是記錄八種 agent 的每一個檔案／工具／指令動作、或照政策在執行前擋，請用 [Gryph](https://github.com/safedep/gryph)——它兩件都做得比這個 repo 好。我們多出來的是：每一拍一輪的雜湊鏈帳本、可回滾的墓碑刪除、治理心跳本身、事故→法條→閘門管線。
 這裡的架構是兩篇已發表設計的參考實作——動作改動目標系統前的外部治理檢查點（[AgentBound](https://arxiv.org/html/2606.30970)）、與雜湊鏈防竄改紀錄加驗證或停止（[Aegis](https://arxiv.org/html/2603.16938v1)）——再加上文獻沒涵蓋的兩件：治理自主**週期本身**，以及事故→法條→閘門管線。完整對照表：[docs/PRIOR_ART.md](docs/PRIOR_ART.md)。
 
 ## 跟誰一起用
@@ -100,7 +99,7 @@ python3 -m unittest discover -s tests
 這個 repo 之所以小，是因為別人已經把大的部分做好了。列在這裡的不是對手，是這個 repo 設計上要「並排」的專案：
 
 * **[Gryph](https://github.com/safedep/gryph)**（SafeDep，Apache-2.0）——我們所知最好的本機優先 coding-agent 稽核軌跡。今天只裝一樣東西的話，裝 Gryph。我們做「閘門＋帳本」這一層，正是**因為** Gryph 已經把「記錄一切」做走了——見 [INTEROP.md](docs/INTEROP.md)。
-* **[halo-record](https://github.com/bkuan001/halo-record)**——一行 Python 就能包住 agent 的 append-only 雜湊鏈紀錄，寫入前先塗黑敏感值。我們的帳本跟它是同一個完整性想法；它的塗黑紀律是我們該學的。
+* **[halo-record](https://github.com/bkuan001/halo-record)**（Apache-2.0）——一行 Python 就能包住 agent 的 append-only 雜湊鏈紀錄，寫入前先塗黑敏感值。我們的帳本跟它是同一個完整性想法；它的塗黑紀律是我們該學的。
 * **[heartbeat-agent-framework](https://github.com/muxueqingze/heartbeat-agent-framework)**（MIT）——把「排程醒來、推進工作」講得最清楚的設計樣式。
 * **[AgentBound](https://arxiv.org/html/2606.30970)** 與 **[Aegis](https://arxiv.org/html/2603.16938v1)**——比我們更早把這套程式碼在執行的兩個不變式寫成正式論文。**[DEMM-Bench](https://arxiv.org/pdf/2606.20634)** 則是這類系統該怎麼被評量。
 * **[Claude Code hooks](https://code.claude.com/docs/en/hooks)**——`PreToolUse` 契約（離開碼 2 擋下）讓閘門不需要包裝程序就能存在。
@@ -109,7 +108,7 @@ python3 -m unittest discover -s tests
 
 ## 現況
 
-`v0.1.0`。維護者在 macOS 上每天實際使用；Linux 路徑盡力支援；不支援 Windows。只用標準函式庫；測試跑在 Python 3.9–3.12。雜湊鏈是**可察覺竄改**，不是防竄改——依賴它之前先讀[威脅模型](docs/THREAT_MODEL.md)。
+`v0.2.0`。`v0.1.0` 在對抗審查發現刪除閘可繞過、帳本雜湊不足後撤回（見 CHANGELOG）。維護者在 macOS 上每天實際使用；Linux 路徑盡力支援；不支援 Windows。只用標準函式庫；測試跑在 Python 3.9–3.12。雜湊鏈是**可察覺竄改**，不是防竄改——依賴它之前先讀[威脅模型](docs/THREAT_MODEL.md)。
 
 ## 授權
 

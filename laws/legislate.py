@@ -55,7 +55,8 @@ def main():
     n.add_argument("--check", action="append", required=True)
     n.add_argument("--enforce", default="none-yet", choices=["gate", "procedure", "checker", "none-yet"])
     n.add_argument("--ref", default=""); n.add_argument("--by", default=paths.AGENT_NAME); n.add_argument("--when", default=date.today().isoformat())
-    sub.add_parser("list"); sub.add_parser("debts")
+    for c in ("list", "debts"):
+        sp = sub.add_parser(c); sp.add_argument("--count", action="store_true")
     v = sub.add_parser("validate"); v.add_argument("path")
     a = ap.parse_args()
 
@@ -64,12 +65,18 @@ def main():
         print("✅ valid" if not p else "❌ " + "; ".join(p)); sys.exit(0 if not p else 1)
     if a.cmd in ("list", "debts"):
         paths.ensure_dirs()
-        for p in sorted(paths.LAWS.glob("law-*.json")):
-            d = json.load(open(p, encoding="utf-8"))
-            kind = d["enforced_by"]["kind"]
-            if a.cmd == "debts" and kind != "none-yet":
-                continue
-            print(f"{d['id']}  [{kind:<9}] {d['law']['text'][:90]}")
+        seen, rows = set(), []
+        for src in (paths.LAWS, Path(__file__).resolve().parent / "examples"):
+            for p in sorted(src.glob("law-*.json")):
+                d = json.load(open(p, encoding="utf-8"))
+                if d["id"] in seen:
+                    continue
+                seen.add(d["id"]); rows.append(d)
+        rows = [d for d in rows if a.cmd == "list" or d["enforced_by"]["kind"] == "none-yet"]
+        if a.count:
+            print(len(rows)); return
+        for d in rows:
+            print(f"{d['id']}  [{d['enforced_by']['kind']:<9}] {d['law']['text'][:90]}")
         return
     lid = next_id()
     doc = {"id": lid,

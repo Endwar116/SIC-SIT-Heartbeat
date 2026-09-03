@@ -17,6 +17,6 @@ jobs:
       - name: one governed tick on a fresh home
         run: |
           export HEARTBEAT_HOME="$RUNNER_TEMP/hb"
-          ./heartbeat/tick.sh || true      # health may be red on CI runners; the tick must still record
+          HEARTBEAT_SERVICE_FILTER='^com\.example\.' ./heartbeat/tick.sh; rc=$?; test $rc -le 1   # 0 ok, 1 = a check was red; >1 = the tick failed to record
           python ledger/ledger.py verify
           test "$(wc -l < "$HEARTBEAT_HOME/ledger/rounds.jsonl" | tr -d ' ')" = "1"

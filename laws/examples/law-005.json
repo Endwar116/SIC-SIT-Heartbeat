@@ -15,17 +15,16 @@
   ]
  },
  "enforced_by": {
-  "kind": "checker",
-  "ref": "rollback/tombstone.py"
+  "kind": "none-yet",
+  "ref": ""
  },
  "lineage": [
   "incident:2026-07-27",
-  "law-005",
-  "checker:rollback/tombstone.py"
+  "law-005"
  ],
  "legislated": {
   "by": "maintainers",
-  "at": "2026-09-03T00:00:00+08:00"
+  "at": "2026-09-02T16:00:00Z"
  },
  "notes": "De-identified from a real operating incident. Names, systems and paths removed; the mechanism is kept."
 }

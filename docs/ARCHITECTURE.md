@@ -22,7 +22,7 @@ acts without a human present — as the unit of governance. Not the action. The 
 
 | part | directory | what it guarantees |
 |---|---|---|
-| **Ledger** | `ledger/` | Every round is one appended line; `hash = sha256(prev_hash + canonical(state))`. Editing any past round breaks every later hash. `verify` recomputes the whole chain. Current state is replaced atomically. |
+| **Ledger** | `ledger/` | Every round is one appended line; `hash = sha256(canonical(whole line minus hash))` — seq, timestamp and state are all covered. Editing any past round breaks every later hash. `verify` recomputes the whole chain. Current state is replaced atomically. |
 | **Gates** | `gates/` | Run *before* a tool executes (Claude Code `PreToolUse`; adaptable). Exit 2 blocks and the reason reaches the agent. Every gate decision is itself appended to `state/gate_decisions.jsonl`. |
 | **Rollback** | `rollback/` | Delete = move into trash + tombstone (who/when/why/how-to-undo) + sha256 manifest. Restore is one command. Only a human empties the trash. |
 | **Heartbeat** | `heartbeat/` | `tick.sh` runs machine-judged checks (chain integrity, quiet-death of services, zombie items, inbox), records one round carrying the results, exits non-zero if anything is red. It never invents work. |
@@ -38,7 +38,8 @@ Step zero of every tick, before any work:
 4. **corrupted variants** — the last N rounds parse and validate.
 5. **positional drift** — no round in the last N carries a different `entity.name`.
 
-`ledger/derive.py` produces 1–3 from the ledger itself; `ledger.py verify` covers 3–5.
+`ledger.py append` refuses a round that fails 1–3 (unless a `--allow-discontinuity` reason is recorded);
+`ledger.py verify` re-checks 2–5 over the whole chain and cross-checks `STATE_CURRENT.json`.
 
 ## Truth sources, not memory
 

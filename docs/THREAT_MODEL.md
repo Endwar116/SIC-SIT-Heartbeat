@@ -89,7 +89,7 @@ Scan for:
 If you find sensitive internal files in the history, rewrite it:
 
 ```bash
-git filter-branch --tree-filter 'rm -f path/to/internal/file' -- --all
+git filter-repo --path <internal-file> --invert-paths   # never filter-branch; never a deletion commit
 # or use git filter-repo (faster, more flexible)
 git filter-repo --path path/to/internal/file --invert-paths
 ```

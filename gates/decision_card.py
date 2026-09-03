@@ -72,8 +72,10 @@ def emphasis_problems(text):
 def check_card(text, label="card"):
     bad = [f"missing [{n}]" for n, pat in REQUIRED if not re.search(pat, text, re.I)]
     bad += emphasis_problems(text)
+    STD = ("ISO", "RFC", "SHA", "IEEE", "UTF", "ECMA", "IEC", "CVE")
     bares = sorted({m.group(0) for m in BARE_CODE.finditer(text)
-                    if not GLOSS.search(text[max(0, m.start() - 30):m.end() + 40])})
+                    if not m.group(0).split("-")[0] in STD
+                    and not GLOSS.search(text[max(0, m.start() - 30):m.end() + 40])})
     if bares:
         bad.append("unexplained codenames: " + ", ".join(bares[:5]))
     if re.search(r"(see|詳見)\s*[`/]|as (mentioned|discussed) (above|before)|如前所述", text, re.I):

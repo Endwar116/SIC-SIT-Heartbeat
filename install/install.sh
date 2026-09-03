@@ -9,9 +9,34 @@
 # What it does not do:  touch anything else in settings.json; install schedulers (see terminal.md).
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; ROOT="$(dirname "$HERE")"
-SETTINGS="${HOME}/.claude/settings.json"; DRY=0
+SETTINGS="${HOME}/.claude/settings.json"; DRY=0; MODE=install
 while [ $# -gt 0 ]; do case "$1" in
-  --settings) SETTINGS="$2"; shift 2;; --dry-run) DRY=1; shift;; *) echo "unknown arg $1"; exit 2;; esac; done
+  --settings) SETTINGS="$2"; shift 2;; --dry-run) DRY=1; shift;; --uninstall) MODE=uninstall; shift;; --check) MODE=check; shift;;
+  *) echo "unknown arg $1"; exit 2;; esac; done
+if [ "$MODE" = check ]; then
+  python3 - "$SETTINGS" "$ROOT" <<'PY2'
+import json,os,sys
+d=json.load(open(sys.argv[1])); bad=0
+for ent in d.get("hooks",{}).get("PreToolUse",[]):
+    for h in ent.get("hooks",[]):
+        cmd=h.get("command",""); tok=cmd.split()[1:2]
+        if tok and tok[0].endswith(".py") and not os.path.exists(tok[0]): print("MISSING:",ent.get("matcher"),tok[0]); bad=1
+print("hooks ok" if not bad else "some hook targets are missing => those gates are silently OFF"); sys.exit(bad)
+PY2
+  exit $?
+fi
+if [ "$MODE" = uninstall ]; then
+  cp "$SETTINGS" "$SETTINGS.bak_$(date +%Y%m%d_%H%M%S)"
+  python3 - "$SETTINGS" "$ROOT" <<'PY2'
+import json,sys
+d=json.load(open(sys.argv[1])); root=sys.argv[2]
+pre=d.get("hooks",{}).get("PreToolUse",[])
+keep=[e for e in pre if not any(root in h.get("command","") for h in e.get("hooks",[]))]
+d["hooks"]["PreToolUse"]=keep; open(sys.argv[1],"w").write(json.dumps(d,ensure_ascii=False,indent=2)+"\n")
+print(f"removed {len(pre)-len(keep)} hook entries pointing into {root}; ledger and trash untouched")
+PY2
+  exit 0
+fi
 export HEARTBEAT_HOME="${HEARTBEAT_HOME:-$HOME/.sic-sit-heartbeat}"
 mkdir -p "$HEARTBEAT_HOME"/{ledger,trash,laws,state,logs,inbox}
 [ -f "$SETTINGS" ] || { mkdir -p "$(dirname "$SETTINGS")"; echo '{}' > "$SETTINGS"; }
@@ -41,3 +66,4 @@ PY
 echo "state dir: $HEARTBEAT_HOME"
 echo "next: python3 $ROOT/ledger/ledger.py verify   (empty chain is intact)"
 echo "      $ROOT/heartbeat/tick.sh                 (one governed tick)"
+echo "note: hooks embed this absolute path. If you move the repo, run install.sh --check (a missing target = gate silently off)."

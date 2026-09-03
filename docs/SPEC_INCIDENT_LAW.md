@@ -58,5 +58,6 @@ python3 laws/legislate.py new \
   --enforce gate --ref gates/your_gate.py
 ```
 
-The heartbeat records the law's id in the round in which it was legislated, so the ledger answers
-"what did we learn, and when".
+Every tick records the number of laws that still have no enforcer (`laws_debts:N` in the round's action), so
+the ledger shows whether the debt is shrinking. Legislation itself is a manual step — nothing turns a law
+into a gate automatically; a human or agent writes the gate and links it.

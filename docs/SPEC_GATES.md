@@ -29,13 +29,19 @@ rationale, not as scripture.
 | **AX5 traceable, explainable, reversible** | `grep <path>` finds the full history; delete = trash; humans empty trash | `rollback/tombstone.py` |
 | **AX6 copy first, never delete source** | move = copy, verify sha256, then remove | tombstone writes a sha256 manifest before moving |
 
+## Residual risk, stated
+
+`x=rm; $x`, `printf … | sh`, `base64 -d | sh`, `eval` cannot be caught by pattern matching without blocking
+half of ordinary shell use; they are **warned** (allowed, logged), not blocked. A sandbox, not a gate, is the
+answer to a determined agent. See THREAT_MODEL.
+
 ## Shipped gates
 
 | gate | hook target | blocks | incident |
 |---|---|---|---|
-| `file_governance.py` | `Bash` | `rm`, `rmdir`, `shred`, `unlink`, `find -delete`, `git clean -f`, truncation by redirect (outside temp/trash) | the maintainers' own repeated attempts to hard-delete |
+| `file_governance.py` | `Bash`, `Write`, `Edit` | `rm`, `rmdir`, `shred`, `unlink`, `find -delete`, `git clean -f`, truncation by redirect (outside temp/trash) | the maintainers' own repeated attempts to hard-delete |
 | `monitor_dedup.py` | `Monitor` (or any watcher-start tool) | mounting a watcher equivalent to an active registry entry | duplicate heartbeats after an assumed-dead clock (law-007) |
-| `prereg_gate.py` | `Workflow` / `Bash` | anything that looks like an experiment and references no *sealed* pre-registration | three benchmark rounds run without sealing one |
+| `prereg_gate.py` | `Workflow` (Bash wiring is deliberately not shipped: too many false positives on ordinary commands) | anything that looks like an experiment and references no *sealed* pre-registration | three benchmark rounds run without sealing one |
 | `decision_card.py` | (checker, not a hook) | a decision card missing any of five elements; more than three open cards | operator cognitive overload (law-006) |
 
 ## Writing a new gate

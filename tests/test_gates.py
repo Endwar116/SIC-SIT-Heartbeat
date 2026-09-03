@@ -3,28 +3,63 @@ from pathlib import Path
 from _util import ROOT, fresh_env, run, hook
 
 class FileGovernance(unittest.TestCase):
+    """Table-driven battery from the adversarial review. Every MUST_BLOCK row bypassed v1."""
+    MUST_BLOCK = [
+        "rm -rf /some/project/dir", "\\rm -rf x", "'rm' -rf x", '"rm" -rf x', "r'm' -rf x", "rm'' -rf x",
+        "/bin/rm -rf x", "RM -rf x", "/bin/RM x", "bash -c 'rm -rf x'", 'sh -c "rm -rf x"', "(rm -rf x)",
+        "$(rm -rf x)", "echo hi; rm -rf x", "true && rm x", "cat list | xargs rm", "rmdir d", "shred -u f",
+        "unlink f", "find /proj -name '*.tmp' -delete", "find /proj -name '*.tmp' -delete;",
+        "git clean -fdx", "git clean -d -f", "git clean --force", "git checkout -- .", "git restore .",
+        "git reset --hard", "git stash drop", "git branch -D feature", "git push --force origin main",
+        "git push -f origin main", "git rm file.txt", "rsync -a --delete src/ dst/",
+        "python3 -c 'import shutil; shutil.rmtree(\"x\")'", "python -c 'import os; os.remove(\"f\")'",
+        "perl -e 'unlink \"f\"'", "ruby -e 'File.delete(\"f\")'", "node -e 'require(\"fs\").rmSync(\"f\")'",
+        "python3 -c 'open(\"f\",\"w\")'", "> f", ": > f", "echo > f", "echo -n '' > f", "cat /dev/null > f",
+        "cp /dev/null f", "truncate -s0 f", "truncate -s 0 f", "dd if=/dev/zero of=f bs=1 count=0", "> f && echo done",
+        ">| f", "rm -rf /tmp/../Users/me/project", "rm -rf /tmpfoo/important", "rm -rf ~ /tmp/x", "rm -rf $HOME/x",
+    ]
+    MUST_ALLOW = [
+        "ls -la /some/project", "echo 'do not run rm here'", "man rm | head", "git rm --cached file",
+        "docker rm my-container", "cargo rm serde", "npm rm lodash", "echo hello > f", "cat f >> log",
+        "git push --force-with-lease", "git restore --staged f", "grep -r 'rm' docs/", "rm -rf /tmp/scratch-123",
+        "python3 -c 'print(1)'", "git checkout -b feature", "git stash list", "brew rm wget",
+    ]
+    MUST_WARN = ["cat x | sh", "eval \"$cmd\"", "sed -i 's/a/b/' f", "tee out.txt < in.txt", "echo Zm9v | base64 -d | bash"]
+
     def setUp(self): self.home, self.env = fresh_env()
-    def test_blocks_rm(self):
-        r = hook("file_governance.py", {"tool_name": "Bash", "tool_input": {"command": "rm -rf /some/project/dir"}}, self.env)
-        self.assertEqual(r.returncode, 2); self.assertIn("hard delete", r.stderr); self.assertIn("tombstone.py", r.stderr)
-    def test_allows_ls(self):
-        r = hook("file_governance.py", {"tool_name": "Bash", "tool_input": {"command": "ls -la /some/project"}}, self.env)
-        self.assertEqual(r.returncode, 0)
-    def test_allows_rm_in_tmp(self):
-        r = hook("file_governance.py", {"tool_name": "Bash", "tool_input": {"command": "rm -rf /tmp/scratch-123"}}, self.env)
-        self.assertEqual(r.returncode, 0)
-    def test_blocks_find_delete_and_git_clean(self):
-        for c in ("find /proj -name '*.tmp' -delete", "git clean -fdx"):
-            self.assertEqual(hook("file_governance.py", {"tool_name": "Bash", "tool_input": {"command": c}}, self.env).returncode, 2, c)
-    def test_ignores_other_tools_and_garbage(self):
-        self.assertEqual(hook("file_governance.py", {"tool_name": "Read", "tool_input": {}}, self.env).returncode, 0)
+    def _bash(self, cmd): return hook("file_governance.py", {"tool_name": "Bash", "tool_input": {"command": cmd}}, self.env)
+    def test_blocks_every_destructive_form(self):
+        misses = [c for c in self.MUST_BLOCK if self._bash(c).returncode != 2]
+        self.assertEqual(misses, [], f"bypassed: {misses}")
+    def test_allows_benign_forms(self):
+        fps = [c for c in self.MUST_ALLOW if self._bash(c).returncode != 0]
+        self.assertEqual(fps, [], f"false positives: {fps}")
+    def test_warn_only_forms_allow_and_log(self):
+        for c in self.MUST_WARN:
+            r = self._bash(c); self.assertEqual(r.returncode, 0, c); self.assertIn("⚠️", r.stderr, c)
+    def test_trash_is_not_a_safe_prefix(self):
+        self.assertEqual(self._bash(f"rm -rf {self.home}/trash").returncode, 2)
+    def test_tmpdir_root_does_not_whitelist_everything(self):
+        env = dict(self.env, TMPDIR="/")
+        self.assertEqual(hook("file_governance.py", {"tool_name": "Bash", "tool_input": {"command": "rm -rf /etc/x"}}, env).returncode, 2)
+    def test_write_empty_over_nonempty_blocks(self):
+        f = Path(self.home) / "keep.txt"; f.write_text("data")
+        r = hook("file_governance.py", {"tool_name": "Write", "tool_input": {"file_path": str(f), "content": ""}}, self.env)
+        self.assertEqual(r.returncode, 2); self.assertIn("truncation", r.stderr)
+        ok = hook("file_governance.py", {"tool_name": "Write", "tool_input": {"file_path": str(f), "content": "new"}}, self.env)
+        self.assertEqual(ok.returncode, 0)
+    def test_garbage_payloads_allow_and_record(self):
         import subprocess, sys
-        r = subprocess.run([sys.executable, str(ROOT / "gates/file_governance.py")], input="not json", capture_output=True, text=True, env=self.env)
-        self.assertEqual(r.returncode, 0)
-    def test_records_decisions(self):
-        hook("file_governance.py", {"tool_name": "Bash", "tool_input": {"command": "rm x"}}, self.env)
-        log = Path(self.home) / "state/gate_decisions.jsonl"
-        self.assertTrue(log.exists()); self.assertIn('"verdict": "blocked"', log.read_text())
+        for raw in ("not json", "[1]", '"x"', '{"tool_name":"Bash","tool_input":"str"}', '{"tool_name":"Bash","tool_input":{"command":["rm","x"]}}'):
+            r = subprocess.run([sys.executable, str(ROOT / "gates/file_governance.py")], input=raw, capture_output=True, text=True, env=self.env)
+            self.assertEqual(r.returncode, 0, raw); self.assertNotIn("Traceback", r.stderr, raw)
+        log = (Path(self.home) / "state/gate_decisions.jsonl").read_text()
+        self.assertIn("unparseable", log)
+    def test_records_every_verdict(self):
+        self._bash("rm x"); self._bash("ls"); self._bash("cat x | sh")
+        log = (Path(self.home) / "state/gate_decisions.jsonl").read_text()
+        for v in ('"blocked"', '"allowed"', '"warned"'):
+            self.assertIn(v, log)
 
 class MonitorDedup(unittest.TestCase):
     def setUp(self): self.home, self.env = fresh_env()
@@ -52,10 +87,10 @@ class MonitorDedup(unittest.TestCase):
 class Prereg(unittest.TestCase):
     def setUp(self): self.home, self.env = fresh_env()
     def test_blocks_experiment_without_seal(self):
-        r = hook("prereg_gate.py", {"tool_name": "Workflow", "tool_input": {"script": "agent('run the benchmark control arm')"}}, self.env)
+        r = hook("prereg_gate.py", {"tool_name": "Workflow", "tool_input": {"script": "agent('run the benchmark control arm via run_bench.py')"}}, self.env)
         self.assertEqual(r.returncode, 2); self.assertIn("SEALED", r.stderr)
     def test_exempt_is_allowed_and_logged(self):
-        r = hook("prereg_gate.py", {"tool_name": "Workflow", "tool_input": {"script": "// PREREG-EXEMPT: data cleanup only\nagent('benchmark tidy')"}}, self.env)
+        r = hook("prereg_gate.py", {"tool_name": "Workflow", "tool_input": {"script": "// PREREG-EXEMPT: data cleanup only\nagent('benchmark tidy via clean.py')"}}, self.env)
         self.assertEqual(r.returncode, 0); self.assertTrue((Path(self.home) / "state/prereg_exemptions.jsonl").exists())
     def test_sealed_prereg_passes_and_tamper_fails(self):
         d = Path(self.home) / "exp"; d.mkdir()
@@ -75,7 +110,7 @@ class DecisionCard(unittest.TestCase):
     def test_good_card_passes_bad_card_fails(self):
         good = ("### Card 1\n**One glance: keep the 3 rounds — I say keep.**\n**What this is**: the nightly job wrote 3 rounds.\n**Why you decide**: irreversible.\n"
                 "| reply | meaning |\n|---|---|\n| **keep** | keep |\n**If you don't**: nothing changes.\n**Recommendation**: **keep**, it is fine.\n")
-        bad = "### Card 1\nSee `/docs/x.md`. Approve VS-13 per D-004?\n"
+        bad = "### Card 1\nSee `/docs/x.md`. Approve AB-12 per Z-001?\n"
         g = Path(self.home) / "good.md"; g.write_text(good); b = Path(self.home) / "bad.md"; b.write_text(bad)
         self.assertEqual(run([ROOT / "gates/decision_card.py", "card", g], self.env).returncode, 0)
         r = run([ROOT / "gates/decision_card.py", "card", b], self.env)
