@@ -22,6 +22,17 @@ GATE = "monitor-dedup"
 WATCHER_TOOLS = {"Monitor", "StartWatcher", "Watch"}
 
 
+def fingerprint(cmd: str):
+    """Loop shape, not literal text: (is a while-true loop, sleep seconds, topic keyword).
+    Registries are written by humans and often hold a summary, not the exact command. Two
+    heartbeats that differ only in echo text must still collide."""
+    c = (cmd or "").lower()
+    loop = bool(re.search(r"while\s+true|while\s+:|for\s*\(\(\s*;;", c))
+    m = re.search(r"sleep\s+(\d+)", c)
+    topic = "heartbeat" if re.search(r"heartbeat|tick|心跳", c) else ("tail" if "tail -f" in c.replace("-F", "-f") else "")
+    return (loop, m.group(1) if m else None, topic)
+
+
 def norm(cmd: str) -> str:
     c = re.sub(r"\s+", " ", (cmd or "").strip())
     c = re.sub(r"\$\(date[^)]*\)", "DATE", c)
@@ -55,9 +66,11 @@ def main():
     if not cmd:
         allow()
     n = norm(cmd)
+    fp = fingerprint(cmd)
     for r in active_entries():
         rn = norm(r.get("cmd", ""))
-        if rn == n or (len(n) > 20 and rn and rn in n):
+        same_shape = fp[0] and fp[2] and fingerprint(r.get("cmd", "")) == fp
+        if rn == n or (len(n) > 20 and rn and rn in n) or same_shape:
             block(
                 f"an equivalent watcher is already registered as active.\n"
                 f"   existing: task_id={r.get('task_id')} desc={r.get('desc')} since {r.get('ts')}\n"

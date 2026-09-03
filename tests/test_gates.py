@@ -35,6 +35,15 @@ class MonitorDedup(unittest.TestCase):
         self.assertEqual(dup.returncode, 2); self.assertIn("already registered", dup.stderr)
         new = hook("monitor_dedup.py", {"tool_name": "Monitor", "tool_input": {"command": "tail -F /var/log/app.log"}}, self.env)
         self.assertEqual(new.returncode, 0)
+    def test_summary_in_registry_still_blocks_same_loop_shape(self):
+        # real-world: humans register a summary, not the exact command
+        reg = Path(self.home) / "state"; reg.mkdir(parents=True)
+        (reg / "watchers.jsonl").write_text(json.dumps({"task_id": "t1", "cmd": "while true; echo heartbeat; sleep 3600", "status": "active"}) + "\n")
+        dup = hook("monitor_dedup.py", {"tool_name": "Monitor", "tool_input": {"command": 'while true; do echo "💓 tick $(date +%H:%M) four checks"; sleep 3600; done'}}, self.env)
+        self.assertEqual(dup.returncode, 2, dup.stderr)
+        other = hook("monitor_dedup.py", {"tool_name": "Monitor", "tool_input": {"command": "while true; do echo tick; sleep 60; done"}}, self.env)
+        self.assertEqual(other.returncode, 0)  # different interval = different watcher
+
     def test_stopped_entry_does_not_block(self):
         reg = Path(self.home) / "state"; reg.mkdir(parents=True)
         (reg / "watchers.jsonl").write_text(json.dumps({"task_id": "t1", "cmd": "tail -F a.log", "status": "active"}) + "\n" + json.dumps({"task_id": "t1", "cmd": "tail -F a.log", "status": "stopped"}) + "\n")
