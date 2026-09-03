@@ -46,7 +46,7 @@ class Smoke(unittest.TestCase):
         self.assertEqual(run([ROOT / "heartbeat/zombie.py", "check"], self.env).returncode, 0)
     def test_legislate_reads_examples_and_counts_debts(self):
         out = run([ROOT / "laws/legislate.py", "list"], self.env).stdout; self.assertIn("law-001", out); self.assertIn("law-010", out)
-        n = int(run([ROOT / "laws/legislate.py", "debts", "--count"], self.env).stdout.strip()); self.assertGreaterEqual(n, 2)
+        n = int(run([ROOT / "laws/legislate.py", "debts", "--count"], self.env).stdout.strip()); self.assertGreaterEqual(n, 1)  # law-005 is the one honest none-yet left
         v = run([ROOT / "laws/legislate.py", "validate", ROOT / "laws/examples/law-005.json"], self.env); self.assertEqual(v.returncode, 0)
     def test_health_runs(self):
         r = run([ROOT / "heartbeat/health.py"], dict(self.env, HEARTBEAT_SERVICE_FILTER="^com\\.example\\.nothing$")); self.assertIn("checked", r.stdout)
