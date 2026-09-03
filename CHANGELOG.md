@@ -17,4 +17,4 @@ First public release. Everything here was in daily use by the maintainers before
   honest `none-yet` debt).
 * **install/** — `install.sh` (Claude Code hooks, backs up settings), INSTALL.md for three
   environments, launchd template with the internal-disk-log lesson baked in.
-* 19 tests, standard library only, CI on ubuntu + macos × Python 3.9/3.11/3.12.
+* 20 tests, standard library only, CI on ubuntu + macos × Python 3.9/3.11/3.12.

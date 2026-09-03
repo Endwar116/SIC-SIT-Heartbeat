@@ -2,7 +2,7 @@
 
 **Leave an agent running overnight. Come back. Audit every tick, roll back any deletion, and see exactly which file and which rule need to change.**
 
-[![CI](https://img.shields.io/badge/tests-19%20passing-brightgreen)](.github/workflows/ci.yml)
+[![CI](https://img.shields.io/badge/tests-20%20passing-brightgreen)](.github/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.9%2B%20stdlib%20only-informational)
 
