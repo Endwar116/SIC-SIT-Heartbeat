@@ -109,6 +109,35 @@ and hash-chained tamper-evident logging with verify-or-halt ([Aegis](https://arx
 — plus two things the literature does not cover: governing the autonomous *period itself*, and the
 incident → law → gate pipeline. Full matrix: [docs/PRIOR_ART.md](docs/PRIOR_ART.md).
 
+## Works alongside
+
+[Gryph](https://github.com/safedep/gryph) records everything your agent does; this repo gates the destructive
+subset and hash-chains the tick. [halo-record](https://github.com/bkuan001/halo-record) hash-chains at the
+per-call grain; [heartbeat-agent-framework](https://github.com/muxueqingze/heartbeat-agent-framework)'s
+`PROJECTS.md` is a good work source for the tick. How they fit: [docs/INTEROP.md](docs/INTEROP.md).
+Security reports: [SECURITY.md](SECURITY.md).
+
+## Acknowledgements — standing on others' work
+
+This repository is small because others already built the large parts well. We link them not as
+competitors but as the projects this one is designed to sit next to:
+
+* **[Gryph](https://github.com/safedep/gryph)** (SafeDep, Apache-2.0) — the best local-first audit trail
+  for coding agents we know of. If you install one thing today, install Gryph. We built the gate-and-ledger
+  layer *because* Gryph already owns "record everything" — see [INTEROP.md](docs/INTEROP.md).
+* **[halo-record](https://github.com/bkuan001/halo-record)** — an append-only, hash-chained record with
+  redaction before write, as a one-line Python wrapper. Our ledger shares its integrity idea; their
+  redaction discipline is something we should adopt.
+* **[heartbeat-agent-framework](https://github.com/muxueqingze/heartbeat-agent-framework)** (MIT) — the
+  clearest statement of "an agent that wakes on a schedule and makes progress" as a design pattern.
+* **[AgentBound](https://arxiv.org/html/2606.30970)** and **[Aegis](https://arxiv.org/html/2603.16938v1)** —
+  the papers that formalised, before we did, the two invariants this code enforces. **[DEMM-Bench](https://arxiv.org/pdf/2606.20634)**
+  for how such systems should be evaluated.
+* **[Claude Code hooks](https://code.claude.com/docs/en/hooks)** — the `PreToolUse` contract (exit 2 blocks) that
+  makes the gates possible without a wrapper process.
+
+If your project belongs on this list, open a PR that adds it — with a line on how the two compose.
+
 ## Status
 
 `v0.1.0`. Used in daily operation by the maintainers on macOS; Linux paths are best-effort;

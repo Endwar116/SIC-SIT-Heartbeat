@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+* **gates/decision_card.py** — salience checks E1–E3 (bold one-glance line, bold option words, recommendation
+  bolds one option); `laws/examples/law-010.json` (refines law-006). Regex bug fixed: recommendation line is
+  matched from line start, not from the keyword.
+* **gates/monitor_dedup.py** — loop-fingerprint matching (registries hold summaries, not exact commands).
+* **docs/INTEROP.md**, **SECURITY.md**, README "Works alongside" + "Acknowledgements".
+* 21 tests.
+
 ## 0.1.0 — 2026-09-03
 
 First public release. Everything here was in daily use by the maintainers before it was published.

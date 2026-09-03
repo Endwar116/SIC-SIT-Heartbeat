@@ -1,0 +1,32 @@
+{
+ "id": "law-010",
+ "incident": {
+  "when": "2026-09-04",
+  "what": "The operator, asked to choose between options on well-formed decision cards, said the explanation was still not clear enough: 'the things that should be loud must be loud, or I cannot see how to choose.' Every required element was present; the choice itself was not visually dominant.",
+  "signal": "Direct feedback after receiving cards that passed the five-element check."
+ },
+ "root_cause": "The five-element rule guaranteed content, not salience. A reader under load scans for what is emphasised; if nothing is, they must read everything.",
+ "law": {
+  "text": "On a decision card, the choice is the loudest thing on the page: a bold one-glance line directly under the heading; every option word bold; the recommendation bolds exactly one option word from the table. Content without salience fails.",
+  "checks": [
+   "first line under the heading is bold and states the choice",
+   "all option words in the table are bold",
+   "recommendation contains one bold option word matching the table"
+  ]
+ },
+ "enforced_by": {
+  "kind": "gate",
+  "ref": "gates/decision_card.py"
+ },
+ "lineage": [
+  "incident:2026-09-04",
+  "law-010",
+  "gate:gates/decision_card.py",
+  "refines:law-006"
+ ],
+ "legislated": {
+  "by": "maintainers",
+  "at": "2026-09-04T02:00:00+08:00"
+ },
+ "notes": "Refines law-006 (five elements, max three cards). Laws stay parallel; this one adds salience to the same incident class."
+}

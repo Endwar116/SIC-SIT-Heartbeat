@@ -17,6 +17,12 @@ Rule — five elements, no exceptions, and at most THREE open cards at once:
   4 IF YOU DON'T      the default outcome. Silence must never deadlock the system.
   5 RECOMMENDATION    one option + one sentence. "Either is fine" is forbidden.
 
+Emphasis (the operator's words: "what should be loud, make it loud, or I cannot see how to choose"):
+  E1 the first line under the card heading is a bold one-glance summary (**…**) of the choice
+  E2 every option word in the options table is bold
+  E3 the recommendation names one option word, bold, exactly as it appears in the table
+A card that has all five elements but buries the choice in plain text fails E1–E3.
+
 Usage:  decision_card.py card <file>  |  board <file>  |  rules
 """
 import re
@@ -35,8 +41,33 @@ CARD_HEAD = re.compile(r"^###?\s*(?:card|卡)\s*\d", re.M | re.I)
 MAX_OPEN = 3
 
 
+def emphasis_problems(text):
+    bad = []
+    body = text.strip().split("\n", 1)
+    first = (body[1].strip().split("\n", 1)[0] if len(body) > 1 else "").strip() if text.lstrip().startswith("#") else body[0].strip()
+    # E1: first non-empty line after heading is bold
+    lines = [l for l in text.split("\n")[1:] if l.strip()]
+    if not lines or not re.match(r"^\*\*.+\*\*", lines[0].strip()):
+        bad.append("E1 first line under heading is not a bold one-glance summary")
+    # E2: option words bold
+    opts = re.findall(r"^\|\s*(.+?)\s*\|", text, re.M)
+    opts = [o for o in opts if o and not re.match(r"^(reply|回|-+|:?-+:?)$", o.strip(), re.I)]
+    plain = [o for o in opts if not re.match(r"^\*\*.+\*\*$", o.strip())]
+    if opts and plain:
+        bad.append(f"E2 option words not bold: {plain[:3]}")
+    # E3: recommendation contains a bold option word that matches the table
+    rec = re.search(r"(recommend|建議)[^\n]*", text, re.I)
+    if rec:
+        bold_in_rec = set(re.findall(r"\*\*(.+?)\*\*", rec.group(0)))
+        table_words = {o.strip("* ") for o in opts}
+        if not (bold_in_rec & table_words):
+            bad.append("E3 recommendation does not bold one option word from the table")
+    return bad
+
+
 def check_card(text, label="card"):
     bad = [f"missing [{n}]" for n, pat in REQUIRED if not re.search(pat, text, re.I)]
+    bad += emphasis_problems(text)
     bares = sorted({m.group(0) for m in BARE_CODE.finditer(text)
                     if not GLOSS.search(text[max(0, m.start() - 30):m.end() + 40])})
     if bares:

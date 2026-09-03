@@ -89,6 +89,24 @@ python3 -m unittest discover -s tests
 如果你只需要**事後**記錄多個 agent 的檔案／工具／指令活動，請用 [Gryph](https://github.com/safedep/gryph)——它做這件事比這個 repo 好。
 這裡的架構是兩篇已發表設計的參考實作——動作改動目標系統前的外部治理檢查點（[AgentBound](https://arxiv.org/html/2606.30970)）、與雜湊鏈防竄改紀錄加驗證或停止（[Aegis](https://arxiv.org/html/2603.16938v1)）——再加上文獻沒涵蓋的兩件：治理自主**週期本身**，以及事故→法條→閘門管線。完整對照表：[docs/PRIOR_ART.md](docs/PRIOR_ART.md)。
 
+## 跟誰一起用
+
+[Gryph](https://github.com/safedep/gryph) 記錄你的 agent 做的每一件事；這個 repo 擋掉其中破壞性的那部分、並把每一拍串成雜湊鏈。
+[halo-record](https://github.com/bkuan001/halo-record) 在「每次呼叫」的粒度做雜湊鏈；[heartbeat-agent-framework](https://github.com/muxueqingze/heartbeat-agent-framework) 的專案清單很適合當每一拍的工作來源。
+怎麼拼在一起：[docs/INTEROP.md](docs/INTEROP.md)。安全回報：[SECURITY.md](SECURITY.md)。
+
+## 致敬——我們站在誰的肩膀上
+
+這個 repo 之所以小，是因為別人已經把大的部分做好了。列在這裡的不是對手，是這個 repo 設計上要「並排」的專案：
+
+* **[Gryph](https://github.com/safedep/gryph)**（SafeDep，Apache-2.0）——我們所知最好的本機優先 coding-agent 稽核軌跡。今天只裝一樣東西的話，裝 Gryph。我們做「閘門＋帳本」這一層，正是**因為** Gryph 已經把「記錄一切」做走了——見 [INTEROP.md](docs/INTEROP.md)。
+* **[halo-record](https://github.com/bkuan001/halo-record)**——一行 Python 就能包住 agent 的 append-only 雜湊鏈紀錄，寫入前先塗黑敏感值。我們的帳本跟它是同一個完整性想法；它的塗黑紀律是我們該學的。
+* **[heartbeat-agent-framework](https://github.com/muxueqingze/heartbeat-agent-framework)**（MIT）——把「排程醒來、推進工作」講得最清楚的設計樣式。
+* **[AgentBound](https://arxiv.org/html/2606.30970)** 與 **[Aegis](https://arxiv.org/html/2603.16938v1)**——比我們更早把這套程式碼在執行的兩個不變式寫成正式論文。**[DEMM-Bench](https://arxiv.org/pdf/2606.20634)** 則是這類系統該怎麼被評量。
+* **[Claude Code hooks](https://code.claude.com/docs/en/hooks)**——`PreToolUse` 契約（離開碼 2 擋下）讓閘門不需要包裝程序就能存在。
+
+你的專案該在這張表上的話，開個 PR 加進來——附一行「兩邊怎麼拼」。
+
 ## 現況
 
 `v0.1.0`。維護者在 macOS 上每天實際使用；Linux 路徑盡力支援；不支援 Windows。只用標準函式庫；測試跑在 Python 3.9–3.12。雜湊鏈是**可察覺竄改**，不是防竄改——依賴它之前先讀[威脅模型](docs/THREAT_MODEL.md)。
