@@ -11,7 +11,8 @@
   "checks": [
    "the subject's own log/state file was read before any verdict",
    "the 'finished by design' hypothesis was explicitly excluded",
-   "watcher registry was read before mounting a watcher"
+   "watcher registry was read before mounting a watcher",
+   "identify the subject through an authoritative mapping (registry, config, the channel's first message), never through a string search — a search that matches every candidate has failed, not succeeded"
   ]
  },
  "enforced_by": {
@@ -27,5 +28,5 @@
   "by": "maintainers",
   "at": "2026-09-02T16:00:00Z"
  },
- "notes": "De-identified from a real operating incident. Names, systems and paths removed; the mechanism is kept."
+ "notes": "De-identified from a real operating incident. Names, systems and paths removed; the mechanism is kept. Amended 2026-09-04 after a same-class incident: a name grep matched all six channels (they share a template), the shell kept the last one, and a pending item was closed on the wrong channel's evidence. Reopened and re-closed on the correct subject."
 }
