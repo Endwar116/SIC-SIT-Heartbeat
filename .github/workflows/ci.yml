@@ -12,6 +12,8 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "${{ matrix.python }}" }
       - run: python -W error::ResourceWarning -m unittest discover -s tests -v
+      - name: release gate (clean-clone tests, never-ship scan, documented counts)
+        run: python scripts/release_check.py
       - name: gates never crash-block on garbage input
         run: echo "not json" | python gates/file_governance.py; test $? -eq 0
       - name: one governed tick on a fresh home
