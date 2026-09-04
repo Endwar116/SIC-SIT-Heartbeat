@@ -90,8 +90,8 @@ and logs. Every decision is appended to `state/gate_decisions.jsonl`. Details: [
 
 ## The laws
 
-`laws/examples/` holds nine incidents from real operation, de-identified, each turned into a rule with
-checkable conditions and a named enforcer. (At v0.2 all eleven have one; `legislate.py debts` will tell you the day that stops being true.) Two to read first:
+`laws/examples/` holds eleven incidents from real operation, de-identified, each turned into a rule with
+checkable conditions and a named enforcer. (All eleven have one; `legislate.py debts` will tell you the day that stops being true.) Two to read first:
 
 * **law-007** — peripheral signals (exit codes, missing logs, process lists) *open* an investigation;
   only the subject's own record can *close* it. Rule out "finished on purpose" before "died".

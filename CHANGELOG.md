@@ -1,8 +1,12 @@
 # Changelog
 
+## Unreleased
+
+* `gates/dispatch_rung.py` (opt-in): dispatches must declare their ladder rung; law-009 moves from `none-yet` to `checker`. `rollback/forget_check.py`: measured acceptance of deletion in SQLite stores (freelist, orphans, size vs baseline); law-005 `none-yet` → `checker`. **Zero unenforced laws.** `law-011` (verify the shipped artifact). 49 tests (measured 2026-09-04: `python3 -m unittest discover -s tests` → `Ran 49 tests … OK`). `tests/__init__.py` now puts `tests/` on `sys.path`, so plain `python3 -m unittest` from the repository root works too. Docs: law count corrected (eleven, not nine); DEMM-Bench title corrected to the paper's own; the 0.2.0 reviewer described accurately (an agent instance, not a person).
+
 ## 0.2.0 — 2026-09-04 — after adversarial review
 
-An independent reviewer cloned `v0.1.0` and ran 82 crafted commands through the deletion gate and 8 failure
+An adversarial review pass — a separate agent instance of the same model family as the author, prompted to break the release, working from a clean clone — ran 82 crafted commands through the deletion gate and 8 failure
 scenarios through the ledger. Verdict: "not credible as a reference implementation today". They were right.
 Everything below is a response to a demonstrated defect, not a feature.
 
@@ -45,18 +49,9 @@ CI asserts the tick's exit code instead of `|| true`.
 → "manually". law-005 is `none-yet`; law-007 is a `checker`. SPEC_LEDGER rewritten for format 2. INTEROP.md,
 SECURITY.md, acknowledgements, `install.sh --check/--uninstall`, workflow badge. Timestamps in laws are UTC.
 
-Tests: 45+. Still standard library only.
+Tests: 47 at `cf643ca` (measured: `python3 -m unittest discover -s tests`). Still standard library only.
 
-## Unreleased
-
-* `gates/dispatch_rung.py` (opt-in): dispatches must declare their ladder rung; law-009 moves from `none-yet` to `checker`. `rollback/forget_check.py`: measured acceptance of deletion in SQLite stores (freelist, orphans, size vs baseline); law-005 `none-yet` → `checker`. **Zero unenforced laws.** `law-011` (verify the shipped artifact). 48 tests.
-
-* **gates/decision_card.py** — salience checks E1–E3 (bold one-glance line, bold option words, recommendation
-  bolds one option); `laws/examples/law-010.json` (refines law-006). Regex bug fixed: recommendation line is
-  matched from line start, not from the keyword.
-* **gates/monitor_dedup.py** — loop-fingerprint matching (registries hold summaries, not exact commands).
-* **docs/INTEROP.md**, **SECURITY.md**, README "Works alongside" + "Acknowledgements".
-* 21 tests.
+Also carried over from the 0.1.x line (committed before the rebuild, never released separately): `gates/decision_card.py` salience checks E1–E3 (law-010) and the recommendation-line regex fix; `gates/monitor_dedup.py` loop-fingerprint matching; `docs/INTEROP.md`, `SECURITY.md`, README "Works alongside" + "Acknowledgements".
 
 ## 0.1.0 — 2026-09-03
 

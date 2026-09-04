@@ -39,7 +39,7 @@ Where this project departs from the literature: it treats the autonomous *period
 - [Behavioral Governance for Autonomous AI Agents: The AgentBound Framework](https://arxiv.org/html/2606.30970) — External governance checkpoint invariant
 - [Cryptographic Runtime Governance for Autonomous AI Systems: The Aegis Architecture for Verifiable Policy Enforcement](https://arxiv.org/html/2603.16938v1) — Hash-chained tamper-evident logging with verify-or-halt
 - [IMDA Agentic AI Governance Framework](https://www.imda.gov.sg) — National governance requirements for autonomous agents (Singapore, 2026-01)
-- [DEMM-Bench: A Benchmark for Evidence-Sufficient Governance of Autonomous Agents](https://arxiv.org/pdf/2606.20634) — Evaluation framework for execution-time governance mechanisms
+- [DEMM-Bench: A Cross-Regime Benchmark for Agent-Runtime Governance-Evidence Sufficiency](https://arxiv.org/pdf/2606.20634) — Evaluation framework for execution-time governance mechanisms
 
 ## Correction (2026-09-04)
 
