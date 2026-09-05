@@ -116,7 +116,10 @@ with mechanisms, not exhortation ([docs/SPEC_IDLE.md](docs/SPEC_IDLE.md)):
   code, a test count); `heartbeat/progress.py` turns K quiet ticks with doable work into `IDLE_SPIN` (red) and locks the item;
 * **forced dual exit** — the `Stop` hook `gates/turn_exit.py`: a promise becomes an item or is dropped, a claim carries a
   receipt or is recorded as a claim, a locked item ends only with a receipt or a named blocker;
-* **green is silent** — a tick with nothing to act on prints nothing; the round and `logs/tick.log` are the proof of life;
+* **the operator's reminder** — `heartbeat/reminder.py set "<one sentence in your own words>"`: what to do when there is
+  nothing to do. Every tick injects it back as its own line; its fingerprint is in every round. Breaks are declared
+  (`reminder.py break --hours 2 --why "…"`) and are not spin; standing work lives in the `evergreen` pile;
+* **green is silent** — a tick with nothing to act on prints no status line (only the reminder); the round and `logs/tick.log` are the proof of life;
 * **measurable** — `progress.py report` prints this installation's empty-wake ratio against the study's baseline.
 
 ## Prior art, honestly

@@ -7,8 +7,9 @@
 #   3. the progress question: did anything external move since the last tick? (receipts, artifacts)
 #      k ticks with doable work and no progress = IDLE_SPIN: red, and the top item is locked (docs/SPEC_IDLE.md)
 #   4. one SIC-JS round appended to the hash-chained ledger, carrying all of the above — composed by code
-#   5. exit 1 if anything is red; and **green is silent**: nothing on stdout unless there is something to act on
+#   5. exit 1 if anything is red; and **green is silent**: no status line unless there is something to act on
 #      (a red check, a next item, new inbox). The ledger round and logs/tick.log are the liveness record.
+#   6. the operator's reminder (heartbeat/reminder.py) is injected as its own line at every tick.
 # If nothing needs doing, the tick records "noop" and exits 0. It never invents work.
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -36,6 +37,8 @@ ext=0; [ "$inbox_n" != "0" ] && ext=1
 prog="$("$PY" "$HERE/progress.py" tick --external "$ext" 2>&1)"; prc=$?
 [ $prc -eq 0 ] || { red=1; detail+="── progress"$'\n'"$prog"$'\n'; }
 notes+=("$prog")
+rem_sha=$("$PY" "$HERE/reminder.py" sha 2>/dev/null || echo "?")
+notes+=("reminder:$rem_sha")
 
 summary="$(IFS=' '; echo "${notes[*]}")"
 anchor="$("$PY" "$ROOT/ledger/derive.py" \
@@ -53,4 +56,6 @@ if [ $red -ne 0 ] || [ "${next_id:-none}" != "none" ] || [ "$inbox_n" != "0" ]; 
   echo "$anchor" | tail -1
   echo "tick: $summary"
 fi
+# the operator's reminder is injected at every tick, as its own line — on a quiet tick it is the only line
+"$PY" "$HERE/reminder.py" inject 2>/dev/null || true
 exit $red

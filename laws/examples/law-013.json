@@ -12,7 +12,8 @@
    "every round carries exit:progress | exit:noop(sha) | exit:spin(k) | exit:IDLE_SPIN(k), composed by code from machine facts",
    "a receipt names a path that exists, a hash, an exit code or a test count — the agent's word alone is rejected",
    "an item filed as waiting carries what can be prepared now, or it is filed as doable",
-   "the empty-wake ratio of the installation can be printed and compared with the 47–53 % baseline"
+   "the empty-wake ratio of the installation can be printed and compared with the 47–53 % baseline",
+   "the operator's reminder (one sentence, the operator's words) is injected at every tick and its fingerprint recorded in the round; a declared break with an end and a reason is not counted as spin"
   ]
  },
  "enforced_by": {

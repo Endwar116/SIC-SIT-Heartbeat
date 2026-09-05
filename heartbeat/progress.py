@@ -9,7 +9,8 @@ progress; an agent can. So the token is not the agent's word but an external sta
 
   progress.py tick [--external 0|1]     classify this tick and update state/progress.json; exit 1 on IDLE_SPIN
       exit:progress(n)    n receipts landed since the last tick             streak reset
-      exit:noop(...)      the doable pile is empty (its snapshot hash is recorded), nothing to invent
+      exit:noop(...)      the doable pile is empty (its snapshot hash is recorded), nothing to invent —
+                          or a break was declared (reminder.py break): a rest with an end and a reason is not spin
       exit:spin(k)        doable work exists and nothing external moved, k < K            (warning)
       exit:IDLE_SPIN(k)   k ≥ K (HEARTBEAT_IDLE_K, default 3): red; the top item is locked for the next turn
   progress.py report                    ticks, empty wake-ups and their ratio — the study's 47–53 % baseline metric
@@ -29,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ledger"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402
 import zombie  # noqa: E402
+import reminder  # noqa: E402
 
 STATE_FILE = paths.STATE / "progress.json"
 LOCK = paths.STATE / "locked_item.json"
@@ -64,8 +66,9 @@ def save_state(st):
 def cmd_tick(external):
     K = int(os.environ.get("HEARTBEAT_IDLE_K", "3")); maxd = int(os.environ.get("HEARTBEAT_MAX_DISPATCH", "8"))
     st = load_state(); items = zombie.load()
-    receipts = sum(1 for i in items.values() if i.get("closed"))
-    doable = zombie.doable(items); snap = zombie.snapshot(items); afp = artifacts_fp()
+    receipts = sum(1 for i in items.values() if i.get("closed")) + sum(len(i.get("notes", [])) for i in items.values())
+    doable = zombie.doable(items) or zombie.evergreen(items)     # evergreen = the operator's "there is always something"
+    snap = zombie.snapshot(items); afp = artifacts_fp(); br = reminder.active_break()
     inbox = paths.HOME / "inbox"; inbox_n = sum(1 for p in inbox.iterdir() if p.is_file()) if inbox.exists() else 0
     gl = gate_lines(); new_gl = gl[st["gd_lines"]:]
     dispatch = sum(1 for l in new_gl if '"gate": "dispatch-rung"' in l)
@@ -76,6 +79,8 @@ def cmd_tick(external):
         exit_ = f"progress({new_receipts})"; st["streak"] = 0
         if LOCK.exists():
             os.replace(LOCK, LOCK.with_name("locked_item.released.json"))
+    elif br:
+        exit_ = f"noop(break until {br['until'][:16]})"; st["breaks"] = st.get("breaks", 0) + 1   # a declared rest is not spin
     elif not doable:
         exit_ = f"noop(queue_empty sha={snap['sha256'][:12]})"; st["streak"] = 0; st["empty"] += 1
     else:

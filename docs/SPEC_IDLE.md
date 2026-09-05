@@ -56,12 +56,35 @@ Every exit is written into the round by code, from machine facts. The agent's na
 **Green is silent.** A tick with no red check, no new item and no event prints nothing for an operator; the
 loop log keeps one line; the ledger keeps the round. Silence is not absence — the round is the liveness proof.
 
+## 3b. The operator's reminder (貼心叮嚀)
+
+Rules did not stop the spin; the study measured that. What did help, every time, was the operator's own sentence.
+So the mechanism has a slot for it: `heartbeat/reminder.py set "<text>"` stores one sentence in the operator's words,
+and **every tick injects it back as its own line** — on a quiet tick it is the only line. Its fingerprint is written
+into every round (`reminder:<sha8>`) so an audit can tell which reminder was in force. No code is touched to change it.
+
+The maintainers' operator left this one (kept as the example, in the original and in translation):
+
+> 如果沒事做可以去找代辦事項，或是自己斟酌要不要放假，但是一定會有事做，沒事就去拿 code review 好好檢查你負責的相關事項
+>
+> *If there is nothing to do, look at the pending list, or decide for yourself whether to take a break — but there
+> is always something: with nothing else, take a code review and go over the things you are responsible for.*
+
+Three things in that sentence became mechanism:
+
+| the operator said | the mechanism |
+|---|---|
+| "look at the pending list" | `zombie.py next` — the tick hands over the top doable item |
+| "decide for yourself whether to take a break" | `reminder.py break --hours H --why W` — a rest with an end and a reason; quiet ticks during it are `noop(break…)`, not spin. `resume` ends it early |
+| "there is always something: a code review of your own areas" | the `evergreen` pile — standing work that never closes; `next` falls back to it; `zombie.py note <id> --receipt` records progress on it without closing |
+
 ## 4. Configuration
 
 | variable | default | meaning |
 |---|---|---|
 | `HEARTBEAT_IDLE_K` | `3` | consecutive no-progress ticks with doable work before `IDLE_SPIN` |
 | `HEARTBEAT_FALLBACK` | `21600` | seconds without an event before a liveness tick (`run_loop.sh --event`) |
+| `$HEARTBEAT_HOME/config/reminder.txt` | unset (the tick asks for one) | the operator's reminder, one sentence, set with `reminder.py set` |
 | `HEARTBEAT_MAX_DISPATCH` | `8` | subagent dispatches per tick before the round is flagged `over-production` |
 | `$HEARTBEAT_HOME/config/turn_exit.json` | built-in EN+ZH markers | promise / completion / receipt patterns for the turn-exit gate |
 

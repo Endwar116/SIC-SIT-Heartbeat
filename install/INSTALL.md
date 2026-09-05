@@ -79,6 +79,14 @@ copy of settings.json is kept). Your ledger and trash are yours.
 unrecorded promise or an untouched locked item blocks the exit once (the reason is shown to the agent), a completion
 claim without a receipt is recorded as a claim. `install.sh --check` covers it; `--uninstall` removes it.
 
+Leave the agent your reminder — one sentence, your words, what to do when there is nothing to do:
+
+```
+python3 heartbeat/reminder.py set "If there is nothing to do, look at the pending list, or decide for yourself whether to take a break — but there is always something: with nothing else, take a code review and go over the things you are responsible for."
+```
+
+Every tick injects it back. Change it any time with the same command; no code involved.
+
 For a scheduler, prefer `heartbeat/run_loop.sh --event` (ticks on inbox / pending-ledger / `touch $HEARTBEAT_HOME/wake`
 events, plus a liveness tick every `HEARTBEAT_FALLBACK` seconds) over a fixed timer: the timer is what manufactures
 idle spin. Markers for the turn-exit gate live in `$HEARTBEAT_HOME/config/turn_exit.json` (optional).

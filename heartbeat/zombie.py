@@ -6,13 +6,16 @@ state/pending.jsonl is append-only, one JSON object per line; nothing is edited 
   close  {"id","closed":{"at","receipt"}}      the receipt must name something a machine can check
   block  {"id","block":{"at","on","pile"}}     the blocker must be concrete; the item leaves the doable pile
 
-Piles = who can act: doable | operator | others | conditional. An item filed as waiting must carry --pre:
-what can be prepared now so that the other side's one word puts it live (false-waiting is the second idle form).
+Piles = who can act: doable | evergreen | operator | others | conditional. An item filed as waiting must carry
+--pre: what can be prepared now so the other side's one word puts it live (false-waiting is the second idle form).
+"evergreen" is standing work that never closes — the operator's "there is always something" (e.g. a code review of
+your own areas): `next` falls back to it when the doable pile is empty; progress on it is recorded with `note`.
 
   zombie.py check                                   items past TTL (exit 1 if any)
   zombie.py open <id> <title> [--pile doable] [--priority P2] [--cost local] [--pre TEXT] [--owner X] [--ttl 7]
   zombie.py close <id> --receipt TEXT               TEXT names an existing path, a hash, an exit code or a test count
   zombie.py block <id> --on TEXT [--pile others]    TEXT is the concrete thing the item waits on
+  zombie.py note <id> --receipt TEXT                progress on an item without closing it (evergreen work)
   zombie.py next                                    the top open doable item (priority, then age) as JSON; empty if none
   zombie.py snapshot                                counts per pile + sha256 over the open set (proof of emptiness)
 
@@ -30,7 +33,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ledger"))
 import paths  # noqa: E402
 
-PILES = ("doable", "operator", "others", "conditional")
+PILES = ("doable", "evergreen", "operator", "others", "conditional")
+WAITING = ("operator", "others", "conditional")
 PRIORITY = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
 COSTS = ("local", "free", "cheap", "flagship")
 RECEIPT_TOKENS = (r"\b[0-9a-f]{16,64}\b", r"\bsha256\b", r"\b(?:exit|rc)[:= ]?0\b", r"\bRan \d+ tests?\b",
@@ -73,6 +77,8 @@ def load():
         elif "block" in r:
             items.get(r["id"], {}).update(pile=r["block"].get("pile", "others"), blocker=r["block"]["on"],
                                           blocked_at=r["block"]["at"])
+        elif "note" in r:
+            items.get(r["id"], {}).setdefault("notes", []).append(r["note"])
         else:
             r.setdefault("pile", "doable"); r.setdefault("priority", "P2"); r.setdefault("cost", "local")
             r.setdefault("opened_at", r.get("opened", ""))
@@ -91,6 +97,16 @@ def open_items(items=None):
 
 def doable(items=None):
     return sorted([i for i in open_items(items) if i.get("pile", "doable") == "doable"], key=sort_key)
+
+
+def evergreen(items=None):
+    return sorted([i for i in open_items(items) if i.get("pile") == "evergreen"], key=sort_key)
+
+
+def next_item(items=None):
+    items = load() if items is None else items
+    d = doable(items) or evergreen(items)
+    return d[0] if d else None
 
 
 def snapshot(items=None):
@@ -116,11 +132,12 @@ def main():
     o.add_argument("--priority", default="P2", choices=sorted(PRIORITY)); o.add_argument("--cost", default="local", choices=COSTS)
     o.add_argument("--pre", default="")
     c = sub.add_parser("close"); c.add_argument("id"); c.add_argument("--receipt", required=True)
-    b = sub.add_parser("block"); b.add_argument("id"); b.add_argument("--on", required=True); b.add_argument("--pile", default="others", choices=PILES[1:])
+    b = sub.add_parser("block"); b.add_argument("id"); b.add_argument("--on", required=True); b.add_argument("--pile", default="others", choices=WAITING)
+    n = sub.add_parser("note"); n.add_argument("id"); n.add_argument("--receipt", required=True)
     a = ap.parse_args()
 
     if a.cmd == "open":
-        if a.pile != "doable" and not concrete(a.pre):
+        if a.pile in WAITING and not concrete(a.pre):
             sys.stderr.write("❌ a waiting item needs --pre: what can be prepared now so the other side's one word puts it live\n"); return 2
         if a.id in load():
             sys.stderr.write(f"❌ {a.id} already exists (append-only ledger: pick a new id)\n"); return 2
@@ -140,10 +157,17 @@ def main():
         if not concrete(a.on):
             sys.stderr.write("❌ --on must name the concrete thing this item waits on (who / what / when), not a placeholder\n"); return 2
         append({"id": a.id, "block": {"at": now_iso(), "on": a.on.strip(), "pile": a.pile}}); print("blocked", a.id, "→", a.pile); return 0
+    if a.cmd == "note":
+        if a.id not in load() or load()[a.id].get("closed"):
+            sys.stderr.write(f"❌ {a.id} is not an open item\n"); return 2
+        ok, why = receipt_checkable(a.receipt)
+        if not ok:
+            sys.stderr.write(f"❌ {why}\n"); return 2
+        append({"id": a.id, "note": {"at": now_iso(), "receipt": a.receipt}}); print("noted", a.id, "—", why); return 0
     if a.cmd == "next":
-        d = doable()
-        if d:
-            print(json.dumps({k: d[0].get(k) for k in ("id", "title", "priority", "cost", "opened", "owner")}, ensure_ascii=False))
+        it = next_item()
+        if it:
+            print(json.dumps({k: it.get(k) for k in ("id", "title", "pile", "priority", "cost", "opened", "owner")}, ensure_ascii=False))
         return 0
     if a.cmd == "snapshot":
         print(json.dumps(snapshot(), ensure_ascii=False)); return 0

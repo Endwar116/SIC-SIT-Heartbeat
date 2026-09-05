@@ -85,7 +85,7 @@ python3 -m unittest discover -s tests
 
 ## 空轉
 
-排程喚醒的 agent 醒來、把上下文讀一遍、回一句「沒事」——維護者自己的研究量到四個 agent 有 47% 到 53% 的醒來就是這樣。這不是紀律問題：醒來的回合一定要產出，而「沒事」是最便宜的合法產出。這裡把它當它本來的樣子——活鎖（livelock）——用機制而不是勸告來治（[docs/SPEC_IDLE.md](docs/SPEC_IDLE.md)）：事件門控喚醒（`run_loop.sh --event`）、工作來源（`zombie.py next`，每拍取最該做的一件或記下空堆的雜湊）、外部可驗的進度（收據要能被程式查、K 拍沒進度＝`IDLE_SPIN` 紅燈並鎖定該件）、回合強制雙出口（`Stop` 掛鉤 `gates/turn_exit.py`：承諾要變待辦、宣稱要帶收據、鎖定件只能用收據或具名 blocker 結束）、綠即靜默、可量測（`progress.py report`）。
+排程喚醒的 agent 醒來、把上下文讀一遍、回一句「沒事」——維護者自己的研究量到四個 agent 有 47% 到 53% 的醒來就是這樣。這不是紀律問題：醒來的回合一定要產出，而「沒事」是最便宜的合法產出。這裡把它當它本來的樣子——活鎖（livelock）——用機制而不是勸告來治（[docs/SPEC_IDLE.md](docs/SPEC_IDLE.md)）：事件門控喚醒（`run_loop.sh --event`）、工作來源（`zombie.py next`，每拍取最該做的一件或記下空堆的雜湊）、外部可驗的進度（收據要能被程式查、K 拍沒進度＝`IDLE_SPIN` 紅燈並鎖定該件）、回合強制雙出口（`Stop` 掛鉤 `gates/turn_exit.py`：承諾要變待辦、宣稱要帶收據、鎖定件只能用收據或具名 blocker 結束）、綠即靜默、可量測（`progress.py report`）。還有一個給操作者的位子：**貼心叮嚀**——`heartbeat/reminder.py set "一句你自己的話"`，寫「沒事的時候該做什麼」，每一拍心跳原句注入回去，改它不用碰程式；放假要宣告（`reminder.py break --hours 2 --why "…"`），宣告過的休息不算空轉；永遠有的常備工作放 `evergreen` 堆。
 
 ## 先前技術，講實話
 

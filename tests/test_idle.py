@@ -166,9 +166,69 @@ class TickIntegration(unittest.TestCase):
         import subprocess
         r = subprocess.run(["bash", str(T)], capture_output=True, text=True, env=env)
         self.assertEqual(r.returncode, 0)
-        self.assertEqual(r.stdout.strip(), "", r.stdout)      # green is silent
+        self.assertNotIn("tick:", r.stdout)                    # green is silent: no status line (the reminder line may print)
         self.assertIn("exit:noop", rounds(d)[-1]["state"]["state"]["current_action"])
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+R = ROOT / "heartbeat" / "reminder.py"
+
+
+class ReminderTests(unittest.TestCase):
+    """The operator's reminder: one sentence in the operator's own words, injected at every heartbeat."""
+
+    def test_default_asks_the_operator_to_set_one(self):
+        d, env = fresh_env()
+        r = run([R, "inject"], env)
+        self.assertEqual(r.returncode, 0); self.assertIn("reminder.py set", r.stdout)
+
+    def test_set_show_inject_round_trip(self):
+        d, env = fresh_env()
+        text = "如果沒事做可以去找代辦事項，或是自己斟酌要不要放假，但是一定會有事做，沒事就去拿 code review 好好檢查你負責的相關事項"
+        self.assertEqual(run([R, "set", text], env).returncode, 0)
+        self.assertNotEqual(run([R, "set", "   "], env).returncode, 0)          # empty is not a reminder
+        self.assertIn(text, run([R, "show"], env).stdout)
+        out = run([R, "inject"], env).stdout
+        self.assertIn(text, out); self.assertTrue(out.startswith("💬"))
+
+    def test_break_is_declared_with_an_end_and_freezes_the_spin_counter(self):
+        d, env = fresh_env(); env["HEARTBEAT_IDLE_K"] = "2"
+        run([Z, "open", "b1", "some work"], env)
+        self.assertNotEqual(run([R, "break", "--why", "tired"], env).returncode, 0)           # needs --hours
+        self.assertEqual(run([R, "break", "--hours", "2", "--why", "rest after a long session"], env).returncode, 0)
+        for _ in range(3):
+            r = run([P, "tick"], env)
+            self.assertEqual(r.returncode, 0); self.assertIn("noop(break", r.stdout)
+        self.assertIn("on break", run([R, "inject"], env).stdout)
+        self.assertEqual(run([R, "resume"], env).returncode, 0)
+        self.assertNotIn("on break", run([R, "inject"], env).stdout)
+
+    def test_evergreen_is_the_fallback_when_doable_is_empty(self):
+        d, env = fresh_env()
+        run([Z, "open", "review", "code review of my own areas", "--pile", "evergreen"], env)
+        self.assertEqual(json.loads(run([Z, "next"], env).stdout)["id"], "review")
+        run([Z, "open", "hot", "a real doable item"], env)
+        self.assertEqual(json.loads(run([Z, "next"], env).stdout)["id"], "hot")
+
+    def test_note_on_evergreen_counts_as_progress_without_closing(self):
+        d, env = fresh_env(); env["HEARTBEAT_IDLE_K"] = "2"
+        run([Z, "open", "review", "code review", "--pile", "evergreen"], env)
+        run([P, "tick"], env)
+        f = Path(d) / "review_note.md"; f.write_text("reviewed x")
+        self.assertEqual(run([Z, "note", "review", "--receipt", f"reviewed, notes in {f}"], env).returncode, 0)
+        r = run([P, "tick"], env)
+        self.assertIn("exit:progress", r.stdout)
+        self.assertEqual(json.loads(run([Z, "next"], env).stdout)["id"], "review")    # still open, still the fallback
+
+    def test_tick_injects_the_reminder_on_an_empty_queue(self):
+        d, env = fresh_env(); env["HEARTBEAT_IDLE_K"] = "1"; env["HEARTBEAT_SERVICE_FILTER"] = "^com\\.example\\.nothing$"
+        run([R, "set", "no work? take a review of your own areas"], env)
+        import subprocess
+        r = subprocess.run(["bash", str(T)], capture_output=True, text=True, env=env)
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(r.stdout.strip().count("\n"), 0)                     # one line only: the reminder, no status noise
+        self.assertIn("take a review", r.stdout)
+        self.assertIn("reminder:", rounds(d)[-1]["state"]["state"]["current_action"])
