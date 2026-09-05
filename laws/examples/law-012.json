@@ -1,0 +1,31 @@
+{
+ "id": "law-012",
+ "incident": {
+  "when": "2026-09-04",
+  "what": "An hourly heartbeat kept waking an agent whose checks were all green. Each wake ended with a one-line 'all green, standing by' message to the operator — twice in a row on the first day of a session, after the same pattern had been called out earlier that week. The operator's words: 'why are you spinning again'. Meanwhile the agent's own pending ledger held items it could have done alone.",
+  "signal": "Operator messages consisting only of check results; consecutive rounds whose only content is a status."
+ },
+ "root_cause": "The rule 'green means silent' was applied to speech but not to work: silence was read as 'nothing to do'. A timer that forces a turn, plus a harness that expects a visible reply per turn, turns every green tick into a message.",
+ "law": {
+  "text": "A green tick is silent to the operator and still recorded. Silence is not absence: the ledger round and the tick log are the liveness proof. Nothing is said unless there is a red check, a next item, or new inbox — and 'nothing to say' is never a reason not to draw the next doable item.",
+  "checks": [
+   "a tick with no red check, no next item and no inbox prints nothing on stdout",
+   "the round is still appended and logs/tick.log still gets its line",
+   "the loop reports a silent tick as nothing, not as 'ok — '"
+  ]
+ },
+ "enforced_by": {
+  "kind": "procedure",
+  "ref": "heartbeat/tick.sh"
+ },
+ "lineage": [
+  "incident:2026-09-04",
+  "law-012",
+  "procedure:heartbeat/tick.sh"
+ ],
+ "notes": "De-identified from a real operating incident. The same agent had recorded the rule in prose three weeks earlier and still broke it — which is why it is now a property of the tick script, not of the agent.",
+ "legislated": {
+  "by": "maintainers",
+  "at": "2026-09-05T00:00:00Z"
+ }
+}

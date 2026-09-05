@@ -5,7 +5,7 @@
 #   ./install/install.sh --settings P   # a different settings.json
 #   ./install/install.sh --dry-run      # show the merged JSON, change nothing
 #
-# What it does:  backs up settings.json  →  merges three PreToolUse hooks  →  creates $HEARTBEAT_HOME
+# What it does:  backs up settings.json  →  merges three PreToolUse hooks + one Stop hook (turn-exit)  →  creates $HEARTBEAT_HOME
 # What it does not do:  touch anything else in settings.json; install schedulers (see terminal.md).
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; ROOT="$(dirname "$HERE")"
@@ -17,7 +17,7 @@ if [ "$MODE" = check ]; then
   python3 - "$SETTINGS" "$ROOT" <<'PY2'
 import json,os,sys
 d=json.load(open(sys.argv[1])); bad=0
-for ent in d.get("hooks",{}).get("PreToolUse",[]):
+for ent in d.get("hooks",{}).get("PreToolUse",[]) + d.get("hooks",{}).get("Stop",[]):
     for h in ent.get("hooks",[]):
         cmd=h.get("command",""); tok=cmd.split()[1:2]
         if tok and tok[0].endswith(".py") and not os.path.exists(tok[0]): print("MISSING:",ent.get("matcher"),tok[0]); bad=1
@@ -32,8 +32,12 @@ import json,sys
 d=json.load(open(sys.argv[1])); root=sys.argv[2]
 pre=d.get("hooks",{}).get("PreToolUse",[])
 keep=[e for e in pre if not any(root in h.get("command","") for h in e.get("hooks",[]))]
-d["hooks"]["PreToolUse"]=keep; open(sys.argv[1],"w").write(json.dumps(d,ensure_ascii=False,indent=2)+"\n")
-print(f"removed {len(pre)-len(keep)} hook entries pointing into {root}; ledger and trash untouched")
+d["hooks"]["PreToolUse"]=keep
+stp=d.get("hooks",{}).get("Stop",[]); keep_s=[e for e in stp if not any(root in h.get("command","") for h in e.get("hooks",[]))]
+removed=(len(pre)-len(keep))+(len(stp)-len(keep_s))
+if "Stop" in d.get("hooks",{}): d["hooks"]["Stop"]=keep_s
+open(sys.argv[1],"w").write(json.dumps(d,ensure_ascii=False,indent=2)+"\n")
+print(f"removed {removed} hook entries pointing into {root}; ledger and trash untouched")
 PY2
   exit 0
 fi
@@ -56,6 +60,10 @@ added = []
 for matcher, cmd in want:
     if (matcher, cmd) not in have:
         pre.append({"matcher": matcher, "hooks": [{"type": "command", "command": cmd}]}); added.append(matcher)
+stop = d["hooks"].setdefault("Stop", [])            # turn-exit gate: promises become items, claims carry receipts
+stop_cmd = f"python3 {root}/gates/turn_exit.py"
+if not any(hk.get("command") == stop_cmd for h in stop for hk in h.get("hooks", [])):
+    stop.append({"matcher": "", "hooks": [{"type": "command", "command": stop_cmd}]}); added.append("Stop")
 out = json.dumps(d, ensure_ascii=False, indent=2)
 if dry:
     print(out)

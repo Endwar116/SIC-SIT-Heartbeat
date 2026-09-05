@@ -45,6 +45,7 @@ answer to a determined agent. See THREAT_MODEL.
 | `decision_card.py` | (checker, not a hook) | a decision card missing any of five elements; more than three open cards | operator cognitive overload (law-006) |
 
 | `dispatch_rung.py` | `Agent` / `Workflow` (**opt-in**, warn by default) | a subagent dispatch whose prompt declares no `RUNG:` and reason | the worker pool died and the agent fell back to the flagship model silently (law-009) |
+| `turn_exit.py` | `Stop` | a promise with no pending item opened this turn (blocks once); a completion claim with no checkable receipt (warns); a locked item (`state/locked_item.json`) not closed or blocked (blocks) | docs/SPEC_IDLE.md; never blocks when `stop_hook_active` |
 
 ## Writing a new gate
 

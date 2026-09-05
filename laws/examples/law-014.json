@@ -1,0 +1,32 @@
+{
+ "id": "law-014",
+ "incident": {
+  "when": "2026-09-04",
+  "what": "An audit of two sessions found 25 promises in the previous session of which 10 had never become work ('I will schedule it for the next heartbeat' — no item, no heartbeat ever asked again), and 111 completion claims of which 36 carried any evidence in the same message. Three formal requests from colleagues sat unanswered for two days because no check counted unanswered mail. Five model switches inside one session meant each new instance inherited the context but not the debts.",
+  "signal": "Sentences of the form 'I will…' with no corresponding item; 'done/pushed/fixed' with no path, hash, exit code or count nearby; a locked item followed by a reply that talks about something else."
+ },
+ "root_cause": "Saying and doing have different costs and no ledger connects them: a promise is free text, work is a tool call, and once the turn ends the promise survives only in the transcript, which nothing re-reads.",
+ "law": {
+  "text": "A turn may not end on an unrecorded promise or a bare claim. A promise becomes a pending item before the turn ends (or is dropped). A completion claim carries a checkable receipt in the same reply or is recorded as a claim, not as done. A locked item ends only with a receipt or a concrete, named blocker — silence is not an exit.",
+  "checks": [
+   "the Stop hook blocks once when a promise marker appears with no item opened this turn and no [pending:<id>] reference",
+   "a completion marker without a receipt token is recorded as 'warned' in gate_decisions.jsonl",
+   "with state/locked_item.json present the turn is blocked until the item is closed or blocked on a concrete reason",
+   "the gate never blocks twice for the same text and never when the harness flags stop_hook_active"
+  ]
+ },
+ "enforced_by": {
+  "kind": "gate",
+  "ref": "gates/turn_exit.py"
+ },
+ "lineage": [
+  "incident:2026-09-04",
+  "law-014",
+  "gate:gates/turn_exit.py"
+ ],
+ "notes": "De-identified from a real audit run at the operator's request. Markers are configurable; the defaults cover English and Chinese.",
+ "legislated": {
+  "by": "maintainers",
+  "at": "2026-09-05T00:00:00Z"
+ }
+}

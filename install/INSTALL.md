@@ -72,3 +72,13 @@ Hooks embed the absolute clone path. A missing hook target exits 127, which the 
 
 `./install/install.sh --uninstall` removes only the hook entries that point into this repo (a `.bak_*`
 copy of settings.json is kept). Your ledger and trash are yours.
+
+## The `Stop` hook and the event-gated loop
+
+`install.sh` now also adds one `Stop` hook — `gates/turn_exit.py` — which runs when the agent ends a turn: an
+unrecorded promise or an untouched locked item blocks the exit once (the reason is shown to the agent), a completion
+claim without a receipt is recorded as a claim. `install.sh --check` covers it; `--uninstall` removes it.
+
+For a scheduler, prefer `heartbeat/run_loop.sh --event` (ticks on inbox / pending-ledger / `touch $HEARTBEAT_HOME/wake`
+events, plus a liveness tick every `HEARTBEAT_FALLBACK` seconds) over a fixed timer: the timer is what manufactures
+idle spin. Markers for the turn-exit gate live in `$HEARTBEAT_HOME/config/turn_exit.json` (optional).

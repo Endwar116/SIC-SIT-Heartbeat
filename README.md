@@ -40,9 +40,9 @@ ships its own deletion gate because we wanted the gate decisions to land in the 
 ## The loop
 
 ```
-scheduler ─▶ wake-up gate ─▶ checks ─▶ (work, gates fire before mutation) ─▶ ledger round ─▶ exit 0/1
-                                                                                  │
-                                                       incident? ──▶ law ──▶ gate (or a recorded debt)
+event / fallback ─▶ wake-up gate ─▶ checks ─▶ next doable item or "pile empty" ─▶ progress? ─▶ ledger round ─▶ exit 0/1
+                                                    │                                  │
+                          incident? ──▶ law ──▶ gate (or a recorded debt)    k ticks no progress ⇒ IDLE_SPIN, item locked
 ```
 
 Every tick appends one **SIC-JS 4.0** round to an append-only ledger where
@@ -84,14 +84,15 @@ Terminal-only and VS Code notes: [install/INSTALL.md](install/INSTALL.md).
 | `gates/monitor_dedup.py` | mounting a watcher equivalent to one already registered active | three heartbeats firing after an *assumed* clock death |
 | `gates/prereg_gate.py` | any experiment that references no **sealed** pre-registration | three benchmark rounds run with the template unused |
 | `gates/decision_card.py` | a human-escalated decision missing any of five elements; >3 open at once | an operator facing 21 unanswerable cards |
+| `gates/turn_exit.py` (`Stop`) | a turn ending on a promise with no pending item, a completion claim with no receipt, or a locked item left untouched | an audit: 10 of 25 promises never became work, 36 of 111 "done" claims carried evidence |
 
 Contract: JSON on stdin, **exit 2 blocks** (reason to the agent), exit 0 allows, a crashing gate allows
 and logs. Every decision is appended to `state/gate_decisions.jsonl`. Details: [docs/SPEC_GATES.md](docs/SPEC_GATES.md).
 
 ## The laws
 
-`laws/examples/` holds eleven incidents from real operation, de-identified, each turned into a rule with
-checkable conditions and a named enforcer. (All eleven have one; `legislate.py debts` will tell you the day that stops being true.) Two to read first:
+`laws/examples/` holds fourteen incidents from real operation, de-identified, each turned into a rule with
+checkable conditions and a named enforcer. (All fourteen have one; `legislate.py debts` will tell you the day that stops being true.) Two to read first:
 
 * **law-007** — peripheral signals (exit codes, missing logs, process lists) *open* an investigation;
   only the subject's own record can *close* it. Rule out "finished on purpose" before "died".
@@ -99,6 +100,24 @@ checkable conditions and a named enforcer. (All eleven have one; `legislate.py d
   it (code, standing orders, design-time approval conditions). Intuition was wrong 3 of 3 times.
 
 The pipeline is a tool, not a document: `python3 laws/legislate.py new --what ... --signal ... --cause ... --text ... --check ... --enforce gate --ref gates/x.py`.
+
+## Idle spin
+
+A scheduled agent wakes, reads everything, and reports "nothing to do". Four agents in the maintainers' own study
+measured 47–53 % of their wake-ups producing exactly that. It is not a discipline failure: a woken turn must produce
+something, and "nothing to do" is the cheapest legal output. This repository treats it as what it is — a livelock —
+with mechanisms, not exhortation ([docs/SPEC_IDLE.md](docs/SPEC_IDLE.md)):
+
+* **event-gated wake** — `heartbeat/run_loop.sh --event` ticks on inbox / ledger / `touch $HEARTBEAT_HOME/wake` events and
+  otherwise only every `HEARTBEAT_FALLBACK` seconds (liveness);
+* **a work source** — `heartbeat/zombie.py open|next|snapshot`: piles by who can act, priority, cost class; a waiting item
+  must say what can be prepared now; every tick draws the top doable item or records the pile's snapshot hash;
+* **external progress** — `zombie.py close --receipt` accepts only what code can check (a path that exists, a hash, an exit
+  code, a test count); `heartbeat/progress.py` turns K quiet ticks with doable work into `IDLE_SPIN` (red) and locks the item;
+* **forced dual exit** — the `Stop` hook `gates/turn_exit.py`: a promise becomes an item or is dropped, a claim carries a
+  receipt or is recorded as a claim, a locked item ends only with a receipt or a named blocker;
+* **green is silent** — a tick with nothing to act on prints nothing; the round and `logs/tick.log` are the proof of life;
+* **measurable** — `progress.py report` prints this installation's empty-wake ratio against the study's baseline.
 
 ## Prior art, honestly
 

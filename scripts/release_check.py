@@ -59,7 +59,10 @@ def main():
     bad = []
     for doc in ("README.md", "CHANGELOG.md"):
         txt = open(os.path.join(tmp, doc), encoding="utf-8").read()
-        for n in set(re.findall(r"Ran (\d+) tests", txt)):
+        found = re.findall(r"Ran (\d+) tests", txt)
+        if doc == "CHANGELOG.md":
+            found = found[:1]   # only the newest entry describes the current tree; older entries are history
+        for n in set(found):
             if int(n) != ran:
                 bad.append(f"{doc} says 'Ran {n} tests', suite ran {ran}")
     if bad:
