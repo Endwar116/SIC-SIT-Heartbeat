@@ -7,7 +7,7 @@ acts without a human present — as the unit of governance. Not the action. The 
             ┌──────────────────────────────────────────────────────────────┐
             │                        one tick                              │
             │                                                              │
- scheduler ─┼─▶ wake-up gate ─▶ checks ─▶ (work) ─▶ ledger round ─▶ exit  │
+ scheduler ─┼─▶ wake-up gate ─▶ checks ─▶ next item / pile empty ─▶ progress? ─▶ ledger round ─▶ exit  │
  (cron /    │   identity      services    gates      hash-chained   0 / 1  │
   launchd / │   lineage       zombies     fire       anchor         RED    │
   Monitor)  │   chain         inbox       before     printed               │

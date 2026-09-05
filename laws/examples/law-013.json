@@ -1,0 +1,33 @@
+{
+ "id": "law-013",
+ "incident": {
+  "when": "2026-07-12",
+  "what": "Four agents on scheduled heartbeats, measured independently: 47 % and 53 % of wake-ups produced nothing but a report that the agent had woken; one agent wrote 74 consecutive self-reflection rounds because reflection was the cheapest legal output; three behavioural fixes ('be more diligent') changed the quality of the empty reports and not their rate. The study concluded the fault is structural — a woken turn must produce something and 'not waking' is not in the action space — and named it a livelock: alive, busy, no progress.",
+  "signal": "Wake-ups whose only state change is the round that records the wake-up; identical 'nothing to do' rounds in a row; rising token spend with flat receipts."
+ },
+ "root_cause": "No work source (so 'nothing to do' is always available), no definition of progress that the agent cannot merely assert, and no monitor outside the agent that notices when doable work sits untouched.",
+ "law": {
+  "text": "A tick either draws the top doable item from the pending ledger or proves the pile empty by recording its snapshot hash. Progress is external: a receipt that code can check, or a new artifact. K consecutive ticks with doable work and no external progress is idle spin: the tick goes red and the top item is locked until it ends with a receipt or a named blocker.",
+  "checks": [
+   "every round carries exit:progress | exit:noop(sha) | exit:spin(k) | exit:IDLE_SPIN(k), composed by code from machine facts",
+   "a receipt names a path that exists, a hash, an exit code or a test count — the agent's word alone is rejected",
+   "an item filed as waiting carries what can be prepared now, or it is filed as doable",
+   "the empty-wake ratio of the installation can be printed and compared with the 47–53 % baseline",
+   "the operator's reminder (one sentence, the operator's words) is injected at every tick and its fingerprint recorded in the round; a declared break with an end and a reason is not counted as spin"
+  ]
+ },
+ "enforced_by": {
+  "kind": "checker",
+  "ref": "heartbeat/progress.py"
+ },
+ "lineage": [
+  "incident:2026-07-12",
+  "law-013",
+  "checker:heartbeat/progress.py"
+ ],
+ "notes": "De-identified from the maintainers' multi-agent study (four agents, 2026-06→07). Its own honest residue is kept as a residue here: a plausible but false blocker is a lie, not a livelock, and needs verification outside the agent.",
+ "legislated": {
+  "by": "maintainers",
+  "at": "2026-09-05T00:00:00Z"
+ }
+}

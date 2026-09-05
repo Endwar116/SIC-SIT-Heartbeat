@@ -24,6 +24,17 @@ This project implements published frameworks for autonomous-agent governance:
 
 Where this project departs from the literature: it treats the autonomous *period itself* (each scheduled tick) as a governed unit subject to the same chain and gate mechanisms. Literature governance targets discrete *actions*; here, the heartbeat interval is a ledger round with its own integrity proof and decision checkpoint. Additionally, this project implements an incident-to-law-to-gate pipeline absent from published work: each execution failure produces a learned rule that is written down with its lineage and, once someone writes the gate, enforced — the pipeline is manual by design, with full lineage from failure case to generated rule to gate application.
 
+## Idle spin: what the literature already had
+
+The anti-idle layer ([SPEC_IDLE.md](SPEC_IDLE.md)) is a deliberate re-use, not an invention. The maintainers' own
+four-agent study found that scheduled agents reproduce a **livelock** (busy, alive, no progress — the classical
+definition from operating-systems literature), that timer-driven wake-ups are the trigger, and that the remedies map
+onto forty-year-old patterns: an **event-driven mailbox with a supervisor outside the actor** (Erlang/OTP, 1986),
+a **dead-man's switch** for liveness, and **progress monitoring** — with one twist the classical setting never
+needed: an agent can lie about progress, so the progress token must be something code can check rather than a
+report. What is added here is only the packaging: a work source, a checkable receipt, a spin counter, and a gate at
+the turn boundary, shipped in one repository.
+
 ## Non-Goals
 
 - **Not an observability platform.** We do not replace dashboards, metrics systems, or distributed tracing. This project's logs are for auditability and governance, not performance insights.

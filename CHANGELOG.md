@@ -2,7 +2,17 @@
 
 ## Unreleased
 
-* `gates/dispatch_rung.py` (opt-in): dispatches must declare their ladder rung; law-009 moves from `none-yet` to `checker`. `rollback/forget_check.py`: measured acceptance of deletion in SQLite stores (freelist, orphans, size vs baseline); law-005 `none-yet` → `checker`. **Zero unenforced laws.** `law-011` (verify the shipped artifact). 49 tests (measured 2026-09-04: `python3 -m unittest discover -s tests` → `Ran 49 tests … OK`). `tests/__init__.py` now puts `tests/` on `sys.path`, so plain `python3 -m unittest` from the repository root works too. Docs: law count corrected (eleven, not nine); DEMM-Bench title corrected to the paper's own; the 0.2.0 reviewer described accurately (an agent instance, not a person).
+* **Idle spin** (docs/SPEC_IDLE.md): `heartbeat/zombie.py` becomes the work source (piles / priority / cost / `--pre`
+  for waiting items / `next` / `snapshot` / `block`; `close` accepts only checkable receipts); `heartbeat/progress.py`
+  classifies every tick as `progress | noop | spin(k) | IDLE_SPIN(k)` from machine facts and locks the top item on
+  spin; `heartbeat/wake.py` + `run_loop.sh --event` replace the timer with events plus a liveness fallback;
+  `gates/turn_exit.py` (`Stop` hook) forces the dual exit: a promise becomes an item, a claim carries a receipt, a
+  locked item ends with a receipt or a named blocker. `tick.sh`: **green is silent** (nothing on stdout unless a red
+  check, a next item or new inbox; the round and `logs/tick.log` keep the record) — a behaviour change for anyone
+  grepping tick output. **The operator's reminder** (`heartbeat/reminder.py`): one sentence in the operator's own words,
+  injected at every tick, fingerprinted in every round; declared breaks (`break --hours --why`) are `noop`, not spin;
+  `evergreen` pile for standing work with `zombie.py note`. Laws 012–014. 73 tests (measured: `python3 -m unittest discover -s tests` → `Ran 73 tests … OK`).
+* `gates/dispatch_rung.py` (opt-in): dispatches must declare their ladder rung; law-009 moves from `none-yet` to `checker`. `rollback/forget_check.py`: measured acceptance of deletion in SQLite stores (freelist, orphans, size vs baseline); law-005 `none-yet` → `checker`. **Zero unenforced laws.** `law-011` (verify the shipped artifact). 49 tests at that commit (measured 2026-09-04: `python3 -m unittest discover -s tests` → `Ran 49 tests … OK`). `tests/__init__.py` now puts `tests/` on `sys.path`, so plain `python3 -m unittest` from the repository root works too. Docs: law count corrected (eleven, not nine); DEMM-Bench title corrected to the paper's own; the 0.2.0 reviewer described accurately (an agent instance, not a person).
 
 ## 0.2.0 — 2026-09-04 — after adversarial review
 

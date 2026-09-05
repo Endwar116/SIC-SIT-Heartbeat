@@ -42,7 +42,9 @@ class Smoke(unittest.TestCase):
     def test_zombie_open_check_close(self):
         run([ROOT / "heartbeat/zombie.py", "open", "W1", "thing", "--ttl", "0"], self.env)
         r = run([ROOT / "heartbeat/zombie.py", "check"], self.env)
-        self.assertEqual(run([ROOT / "heartbeat/zombie.py", "close", "W1", "--receipt", "done, see x"], self.env).returncode, 0)
+        self.assertEqual(run([ROOT / "heartbeat/zombie.py", "close", "W1", "--receipt", "done, trust me"], self.env).returncode, 2)   # a receipt must be checkable
+        rp = Path(self.env["HEARTBEAT_HOME"]) / "receipt.txt"; rp.write_text("x")
+        self.assertEqual(run([ROOT / "heartbeat/zombie.py", "close", "W1", "--receipt", f"done, see {rp}"], self.env).returncode, 0)
         self.assertEqual(run([ROOT / "heartbeat/zombie.py", "check"], self.env).returncode, 0)
     def test_legislate_reads_examples_and_counts_debts(self):
         out = run([ROOT / "laws/legislate.py", "list"], self.env).stdout; self.assertIn("law-001", out); self.assertIn("law-010", out)
@@ -55,15 +57,16 @@ class Smoke(unittest.TestCase):
     def test_install_dry_run_and_check(self):
         sp = Path(self.home) / "settings.json"; sp.write_text("{}")
         r = subprocess.run([str(ROOT / "install/install.sh"), "--settings", str(sp), "--dry-run"], capture_output=True, text=True, env=self.env)
-        self.assertEqual(r.returncode, 0, r.stderr); self.assertEqual(r.stdout.count("gates/"), 3)
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertEqual(r.stdout.count("gates/"), 4)   # 3 PreToolUse gates + the Stop hook (turn-exit)
         subprocess.run([str(ROOT / "install/install.sh"), "--settings", str(sp)], capture_output=True, text=True, env=self.env)
         self.assertEqual(subprocess.run([str(ROOT / "install/install.sh"), "--settings", str(sp), "--check"], capture_output=True, text=True, env=self.env).returncode, 0)
         u = subprocess.run([str(ROOT / "install/install.sh"), "--settings", str(sp), "--uninstall"], capture_output=True, text=True, env=self.env)
-        self.assertIn("removed 3", u.stdout); self.assertEqual(json.loads(sp.read_text())["hooks"]["PreToolUse"], [])
+        self.assertIn("removed 4", u.stdout)   # 3 PreToolUse + 1 Stop (turn-exit); self.assertEqual(json.loads(sp.read_text())["hooks"]["PreToolUse"], [])
     def test_tick_records_a_round(self):
         env = dict(self.env, HEARTBEAT_SERVICE_FILTER="^com\\.example\\.nothing$")
         r = subprocess.run([str(ROOT / "heartbeat/tick.sh")], capture_output=True, text=True, env=env)
-        self.assertLessEqual(r.returncode, 1, r.stdout + r.stderr); self.assertIn("laws_debts:", r.stdout)
+        self.assertLessEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("laws_debts:", (Path(env["HEARTBEAT_HOME"]) / "logs" / "tick.log").read_text())   # green is silent on stdout; the log keeps the line
         self.assertEqual(run([ROOT / "ledger/ledger.py", "verify"], env).returncode, 0)
 
 if __name__ == "__main__":
